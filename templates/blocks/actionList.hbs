@@ -23,7 +23,7 @@
           <div class="ms-action-controls">
             {{#each this.controls}}
               <button type="button" class="ms-ctrl{{#if this.active}} ms-on{{/if}}"
-                      data-action="{{this.action}}" data-item-id="{{this.itemId}}"
+                      data-action="{{this.action}}" data-item-id="{{this.itemId}}" data-key="{{this.key}}"
                       aria-label="{{this.label}}" data-tooltip="{{this.label}}">
                 <i class="{{this.icon}}"></i>
               </button>

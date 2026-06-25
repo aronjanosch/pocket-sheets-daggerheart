@@ -88,6 +88,34 @@ function traitsGrid(actor) {
   return { kind: "statGrid", cols: 3, stats };
 }
 
+/** Damage thresholds (Major / Severe) — the system computes these in derived data. */
+function thresholdsBlocks(actor) {
+  const t = actor.system?.damageThresholds;
+  if (!t) return [];
+  const major = num(t.major);
+  const severe = num(t.severe);
+  if (major == null && severe == null) return [];
+  return [
+    { kind: "heading", label: L("heading.thresholds") },
+    { kind: "statGrid", cols: 2, stats: [
+      { label: L("threshold.major"), value: major ?? 0 },
+      { label: L("threshold.severe"), value: severe ?? 0 }
+    ] }
+  ];
+}
+
+/** Short / Long rest — open the system's own Downtime dialog. Omitted if absent. */
+function restButtons() {
+  if (!game.system?.api?.applications?.dialogs?.Downtime) return null;
+  return {
+    kind: "buttons",
+    items: [
+      { label: L("rest.short"), action: "rest", key: "short", icon: "fa-mug-hot" },
+      { label: L("rest.long"), action: "rest", key: "long", icon: "fa-campground" }
+    ]
+  };
+}
+
 function itemRows(actor, types, map) {
   const list = actor.items?.filter((i) => types.includes(i.type)) ?? [];
   return list.map(map);
@@ -211,9 +239,7 @@ function featureRow(item) {
  * back to a flat feature list if that getter is unavailable on this version.
  */
 function featuresTab(actor) {
-  const blocks = [];
-  const exp = experiencesBlock(actor);
-  if (exp) blocks.push(exp);
+  const blocks = [...experiencesBlocks(actor)];
 
   let lists = null;
   try { lists = actor.system?.sheetLists; } catch (_) { lists = null; }
@@ -236,20 +262,26 @@ function featuresTab(actor) {
   return blocks;
 }
 
-function experiencesBlock(actor) {
+/** Experiences as tappable rows, each able to post itself to chat (like the system sidebar). */
+function experiencesBlocks(actor) {
   const exp = actor.system?.experiences;
-  const list = exp ? Object.values(exp) : [];
-  if (!list.length) return null;
-  const esc = Handlebars.escapeExpression;
-  const rows = list
-    .map((e) => {
-      const v = e?.value;
-      const sign = typeof v === "number" && v >= 0 ? "+" : "";
-      const m = v != null ? `${sign}${v} ` : "";
-      return `<li>${esc(`${m}${e?.name ?? ""}`.trim())}</li>`;
-    })
-    .join("");
-  return { kind: "info", title: L("list.experiences"), html: `<ul>${rows}</ul>` };
+  const entries = exp ? Object.entries(exp) : [];
+  if (!entries.length) return [];
+  const items = entries.map(([id, e]) => {
+    const v = e?.value;
+    const prefix = typeof v === "number" ? `${mod(v)} ` : "";
+    return {
+      key: id,
+      name: `${prefix}${e?.name ?? ""}`.trim(),
+      glyph: "✶",
+      use: false,
+      controls: [{ kind: "expChat", key: id }]
+    };
+  });
+  return [
+    { kind: "heading", label: L("list.experiences"), count: items.length },
+    { kind: "actionList", items }
+  ];
 }
 
 /** Inventory: gold, then the system's inventory categories with equip controls. */
@@ -377,6 +409,43 @@ async function useItem(actor, intent) {
   return actor.items?.get(intent.itemId)?.use?.(intent.event);
 }
 
+/** Open the system's Downtime (rest) dialog for a short or long rest. */
+function openRest(actor, key) {
+  const Downtime = game.system?.api?.applications?.dialogs?.Downtime;
+  if (!Downtime) return;
+  return new Downtime(actor, key === "short").render({ force: true });
+}
+
+/**
+ * Post an experience to chat. There is no document method for this — the system
+ * builds the card inline in its sheet — so we mirror that build, reusing the
+ * system's own chat template + flags so the card matches.
+ */
+async function experienceToChat(actor, id) {
+  const exp = actor.system?.experiences?.[id];
+  if (!exp) return;
+  const cls = getDocumentClass("ChatMessage");
+  const value = typeof exp.value === "number" ? exp.value : 0;
+  const signed = typeof value.signedString === "function" ? value.signedString() : mod(value);
+  const systemData = {
+    actor: { name: actor.name, img: actor.img },
+    author: game.users.get(game.user.id),
+    action: { name: `${exp.name ?? ""} ${signed}`.trim(), img: "/icons/sundries/misc/admission-ticket-blue.webp" },
+    itemOrigin: { name: L("list.experiences") },
+    description: exp.description ?? ""
+  };
+  const content = await foundry.applications.handlebars.renderTemplate(
+    "systems/daggerheart/templates/ui/chat/action.hbs",
+    systemData
+  );
+  return cls.create({
+    user: game.user.id,
+    content,
+    speaker: cls.getSpeaker(),
+    flags: { daggerheart: { cssClass: "dh-chat-message dh-style" } }
+  });
+}
+
 // --- adapter -----------------------------------------------------------------
 
 /** @type {PocketSheetAdapter} */
@@ -406,8 +475,10 @@ export const daggerheartAdapter = {
       resourceBlock(actor, "stress", L("resource.stress"), "stress", "pips"),
       resourceBlock(actor, "hope", L("resource.hope"), "accent", "diamond"),
       resourceBlock(actor, "armor", L("resource.armor"), "armor", "pips"),
+      ...thresholdsBlocks(actor),
       { kind: "heading", label: L("heading.traits") },
-      traitsGrid(actor)
+      traitsGrid(actor),
+      restButtons()
     ].filter(Boolean);
 
     const loadout = loadoutTab(actor);
@@ -442,10 +513,14 @@ export const daggerheartAdapter = {
         return actor.items.get(intent.itemId)?.sheet?.render(true);
       case "toChat":
         return postToChat(actor, intent.itemId);
+      case "expChat":
+        return experienceToChat(actor, intent.key);
       case "equip":
         return toggleEquip(actor, intent.itemId);
       case "vault":
         return toggleVault(actor, intent.itemId);
+      case "rest":
+        return openRest(actor, intent.key);
       case "adjustResource":
         return adjustResource(actor, intent.key, intent.delta);
       case "setResource":

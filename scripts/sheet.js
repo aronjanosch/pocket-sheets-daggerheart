@@ -19,7 +19,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
 /** Block kinds the shell knows how to render → their partial file names. */
-const KNOWN_KINDS = new Set(["resource", "statGrid", "tags", "actionList", "info", "heading"]);
+const KNOWN_KINDS = new Set(["resource", "statGrid", "tags", "actionList", "info", "heading", "buttons"]);
 
 /** Resource tones map to a shell-owned role color class (theming stays in shell). */
 const TONE_CLASS = {
@@ -40,7 +40,8 @@ const clampPct = (v, m) => (!m || m <= 0 ? 0 : Math.max(0, Math.min(100, (v / m)
 const CONTROL_DEF = {
   equip: { action: "equip", icon: "fa-solid fa-shield-halved", labelKey: "MOBILE_SHEET.action.equip" },
   vault: { action: "vault", icon: "fa-solid fa-arrow-down", onIcon: "fa-solid fa-arrow-up", labelKey: "MOBILE_SHEET.action.vault" },
-  chat: { action: "toChat", icon: "fa-regular fa-message", labelKey: "MOBILE_SHEET.action.chat" }
+  chat: { action: "toChat", icon: "fa-regular fa-message", labelKey: "MOBILE_SHEET.action.chat" },
+  expChat: { action: "expChat", icon: "fa-regular fa-message", labelKey: "MOBILE_SHEET.action.chat" }
 };
 
 export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
@@ -59,8 +60,10 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       useItem: PocketSheet.#onUseItem,
       openItem: PocketSheet.#onOpenItem,
       toChat: PocketSheet.#onToChat,
+      expChat: PocketSheet.#onExpChat,
       equip: PocketSheet.#onEquip,
       vault: PocketSheet.#onVault,
+      rest: PocketSheet.#onRest,
       adjustResource: PocketSheet.#onAdjustResource,
       toggleTag: PocketSheet.#onToggleTag,
       toggleItem: PocketSheet.#onToggleItem,
@@ -170,6 +173,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       case "statGrid": return { ...this.#statGrid(b), partial };
       case "tags": return { ...this.#tags(b), partial };
       case "actionList": return { ...this.#actionList(b), partial };
+      case "buttons": return { ...this.#buttons(b), partial };
       case "heading": return { kind: b.kind, partial, label: b.label, count: b.count != null ? String(b.count) : "", hasCount: b.count != null };
       case "info":
       default: return { kind: b.kind, partial, title: b.title, hasTitle: !!b.title, html: b.html ?? "" };
@@ -270,7 +274,8 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
             const def = CONTROL_DEF[c.kind];
             if (!def) return null;
             return {
-              itemId: i.itemId,
+              itemId: i.itemId ?? "",
+              key: c.key ?? i.key ?? "",
               action: def.action,
               icon: c.active && def.onIcon ? def.onIcon : def.icon,
               active: !!c.active,
@@ -311,6 +316,19 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     };
   }
 
+  #buttons(b) {
+    return {
+      kind: "buttons",
+      items: (b.items ?? []).map((x) => ({
+        label: x.label,
+        action: x.action,
+        key: x.key ?? "",
+        icon: x.icon ?? "",
+        hasIcon: !!x.icon
+      }))
+    };
+  }
+
   // --- intent dispatch ------------------------------------------------------
 
   /** Forward an Intent to the adapter. The shell never mutates/rolls itself. */
@@ -345,6 +363,14 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   static #onToChat(event, target) {
     return this.#dispatch({ type: "toChat", itemId: target.dataset.itemId, event });
+  }
+
+  static #onExpChat(event, target) {
+    return this.#dispatch({ type: "expChat", key: target.dataset.key, event });
+  }
+
+  static #onRest(event, target) {
+    return this.#dispatch({ type: "rest", key: target.dataset.key, event });
   }
 
   static #onEquip(event, target) {

@@ -47,8 +47,8 @@
 
 /**
  * @typedef {object} Intent
- * @property {"rollStat"|"useItem"|"openItem"|"adjustResource"|"setResource"|"toggleTag"|"toggleItem"|"toChat"|"equip"|"vault"|"primary"} type
- * @property {string} [key]     Stat key (rollStat), resource key (adjustResource/setResource), or tag key (toggleTag).
+ * @property {"rollStat"|"useItem"|"openItem"|"adjustResource"|"setResource"|"toggleTag"|"toggleItem"|"toChat"|"expChat"|"equip"|"vault"|"rest"|"primary"} type
+ * @property {string} [key]     Stat key (rollStat), resource key (adjustResource/setResource), tag key (toggleTag), experience id (expChat), or button key (rest: "short"/"long").
  * @property {string} [itemId]  Item id (useItem / openItem / toggleItem / toChat / equip / vault).
  * @property {string} [uuid]    Sub-document uuid (useItem on an item's individual action).
  * @property {number} [delta]   Resource step (adjustResource), e.g. +1 / -1.
@@ -110,7 +110,7 @@
  */
 
 /**
- * @typedef {ResourceBlock|StatGridBlock|TagsBlock|ActionListBlock|InfoBlock|HeadingBlock} Block
+ * @typedef {ResourceBlock|StatGridBlock|TagsBlock|ActionListBlock|InfoBlock|HeadingBlock|ButtonsBlock} Block
  */
 
 /**
@@ -176,7 +176,8 @@
  * @property {ActionItem[]} items
  *
  * @typedef {object} ActionItem
- * @property {string} itemId
+ * @property {string} [itemId]  Item id; absent for non-item rows (e.g. experiences keyed by `key`).
+ * @property {string} [key]     Non-item key (experience id) used by controls like expChat.
  * @property {string} name
  * @property {string} [sub]      Secondary line (domain · level, school, range…).
  * @property {string} [img]      Thumbnail; falls back to `glyph`.
@@ -199,8 +200,9 @@
  *
  * A small control icon on an item row. The shell owns each kind's icon + intent.
  * @typedef {object} Control
- * @property {"equip"|"vault"|"chat"} kind
+ * @property {"equip"|"vault"|"chat"|"expChat"} kind
  * @property {boolean} [active]  Toggle state (equipped, or stored in vault).
+ * @property {string} [key]      Non-item key the control acts on (expChat -> experience id).
  */
 
 /**
@@ -217,6 +219,21 @@
  * @property {"heading"} kind
  * @property {string} label
  * @property {string|number} [count] e.g. "4 in loadout".
+ */
+
+/**
+ * A row of action buttons not tied to an item (Short/Long rest, etc). Each
+ * button's `action` must be a registered shell action; the shell dispatches an
+ * intent of that type carrying `key`.
+ * @typedef {object} ButtonsBlock
+ * @property {"buttons"} kind
+ * @property {ButtonEntry[]} items
+ *
+ * @typedef {object} ButtonEntry
+ * @property {string} label   Display-ready.
+ * @property {string} action  Intent type / registered shell action (e.g. "rest").
+ * @property {string} [key]   Passed through as the intent `key` (e.g. "short").
+ * @property {string} [icon]  FontAwesome class fragment, e.g. "fa-mug-hot".
  */
 
 export {};

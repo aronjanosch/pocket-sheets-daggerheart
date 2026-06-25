@@ -733,6 +733,33 @@
   flex: 0 0 auto;
 }
 
+/* --- buttons block (rest, etc) -------------------------------------------- */
+
+.ms-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ms-block-btn {
+  flex: 1 1 0;
+  min-height: var(--ms-tap-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 13px;
+  border: 1px solid color-mix(in oklab, var(--ms-accent) 40%, var(--ms-line2));
+  background: color-mix(in oklab, var(--ms-accent) 10%, var(--ms-surf));
+  color: var(--ms-fg);
+  font: 600 14px var(--ms-sans);
+  cursor: pointer;
+}
+
+.ms-block-btn:active { border-color: var(--ms-accent); transform: scale(0.98); }
+.ms-block-btn > i { color: var(--ms-accent); }
+
 /* --- info block ----------------------------------------------------------- */
 
 .ms-info-body { font-size: 14px; color: var(--ms-soft); }

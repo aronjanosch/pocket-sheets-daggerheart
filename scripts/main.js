@@ -42,7 +42,8 @@ Hooks.once("init", () => {
     `modules/${MODULE_ID}/templates/blocks/tags.hbs`,
     `modules/${MODULE_ID}/templates/blocks/actionList.hbs`,
     `modules/${MODULE_ID}/templates/blocks/info.hbs`,
-    `modules/${MODULE_ID}/templates/blocks/heading.hbs`
+    `modules/${MODULE_ID}/templates/blocks/heading.hbs`,
+    `modules/${MODULE_ID}/templates/blocks/buttons.hbs`
   ]);
 
   // Dev-only: a flag to register the stub adapter for shell testing (Phase 1 §8).
