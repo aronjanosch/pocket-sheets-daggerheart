@@ -52,7 +52,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   #activeStatKey = null;
 
   static DEFAULT_OPTIONS = {
-    classes: ["pocket-sheet"],
+    classes: ["pocket-sheet", "ms-sheet"],
     position: { width: 430, height: 860 },
     window: { resizable: true },
     actions: {

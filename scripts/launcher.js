@@ -243,6 +243,21 @@ function installLauncherFab() {
   document.body.appendChild(btn);
 }
 
+// --- phone "sheet-only" chrome --------------------------------------------
+
+/**
+ * On a phone with the canvas off, strip Foundry's chrome (nav, sidebar, hotbar,
+ * controls, players — all under `#interface`) and let the sheet fill the screen.
+ * Pure presentation: a single body class drives the CSS, fully reversible. The
+ * sheet and launcher render on `<body>`, outside `#interface`, so they survive.
+ * Gated on the canvas actually being off, so a phone that keeps the map keeps
+ * its UI too.
+ */
+export function applyMobileChrome() {
+  const on = isMobile() && game.settings.get("core", "noCanvas");
+  document.body.classList.toggle("pocket-sheet-only", on);
+}
+
 // --- entry point (call from `ready`) ---------------------------------------
 
 /**
@@ -250,6 +265,7 @@ function installLauncherFab() {
  * Call after registerPocketSheet() so the sheet class is registered.
  */
 export function activateLauncher() {
+  applyMobileChrome();
   if (shouldShowFab()) installLauncherFab();
   if (!shouldActivate()) return;
 

@@ -910,6 +910,41 @@
 
 .ms-fab:hover { filter: brightness(1.08); }
 
+/* --- phone "sheet-only" mode --------------------------------------------- */
+/* Set by launcher.js when on a phone with the canvas disabled: hide all of
+ * Foundry's chrome and let the sheet fill the viewport. The sheet, launcher and
+ * popouts live on <body>, outside #interface, so only the chrome disappears. */
+body.pocket-sheet-only #interface,
+body.pocket-sheet-only #pause,
+body.pocket-sheet-only #tooltip {
+  display: none !important;
+}
+
+/* Fullscreen the sheet (only — never the actor picker). !important beats the
+ * inline width/height/top/left ApplicationV2 writes from its position. */
+body.pocket-sheet-only .pocket-sheet.ms-sheet {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: 100vw !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+/* No window frame in fullscreen — the sheet owns its whole surface. */
+body.pocket-sheet-only .ms-sheet .window-header,
+body.pocket-sheet-only .ms-sheet .window-resize-handle {
+  display: none !important;
+}
+
+/* Keep the launcher tappable above the fullscreen sheet and any popout. */
+body.pocket-sheet-only .ms-fab {
+  z-index: 2147483000;
+}
+
 /* --- bottom sheet (adjust / roll) ----------------------------------------- */
 
 @keyframes ms-sheet-in {
