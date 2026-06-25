@@ -19,7 +19,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
 /** Block kinds the shell knows how to render → their partial file names. */
-const KNOWN_KINDS = new Set(["resource", "statGrid", "tags", "actionList", "info", "heading", "buttons"]);
+const KNOWN_KINDS = new Set(["resource", "statGrid", "tags", "actionList", "info", "heading", "buttons", "scale"]);
 
 /** Resource tones map to a shell-owned role color class (theming stays in shell). */
 const TONE_CLASS = {
@@ -64,6 +64,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       equip: PocketSheet.#onEquip,
       vault: PocketSheet.#onVault,
       rest: PocketSheet.#onRest,
+      deathMove: PocketSheet.#onDeathMove,
       adjustResource: PocketSheet.#onAdjustResource,
       toggleTag: PocketSheet.#onToggleTag,
       toggleItem: PocketSheet.#onToggleItem,
@@ -174,6 +175,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       case "tags": return { ...this.#tags(b), partial };
       case "actionList": return { ...this.#actionList(b), partial };
       case "buttons": return { ...this.#buttons(b), partial };
+      case "scale": return { ...this.#scale(b), partial };
       case "heading": return { kind: b.kind, partial, label: b.label, count: b.count != null ? String(b.count) : "", hasCount: b.count != null };
       case "info":
       default: return { kind: b.kind, partial, title: b.title, hasTitle: !!b.title, html: b.html ?? "" };
@@ -242,6 +244,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           rankClass: r ? r[1] : "",
           hasRank: !!r,
           save: !!s.save,
+          spellcast: !!s.spellcast,
           active: !!s.select && s.key === this.#activeStatKey,
           tappable: !!actionName,
           actionName
@@ -324,9 +327,22 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         action: x.action,
         key: x.key ?? "",
         icon: x.icon ?? "",
-        hasIcon: !!x.icon
+        hasIcon: !!x.icon,
+        danger: x.variant === "danger"
       }))
     };
+  }
+
+  /** Compact labeled scale: interleave zone labels with the boundary values between them. */
+  #scale(b) {
+    const segments = b.segments ?? [];
+    const bounds = b.bounds ?? [];
+    const parts = [];
+    segments.forEach((s, i) => {
+      parts.push({ isSegment: true, label: s?.label ?? "" });
+      if (i < segments.length - 1 && bounds[i]) parts.push({ isBound: true, value: String(bounds[i].value ?? "") });
+    });
+    return { kind: "scale", label: b.label ?? "", hasLabel: !!b.label, parts };
   }
 
   // --- intent dispatch ------------------------------------------------------
@@ -371,6 +387,10 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   static #onRest(event, target) {
     return this.#dispatch({ type: "rest", key: target.dataset.key, event });
+  }
+
+  static #onDeathMove(event, target) {
+    return this.#dispatch({ type: "deathMove", event });
   }
 
   static #onEquip(event, target) {

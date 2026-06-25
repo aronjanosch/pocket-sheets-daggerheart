@@ -2,7 +2,7 @@
       Each button dispatches its `action` intent carrying `key`. --}}
 <section class="ms-block ms-buttons">
   {{#each items}}
-    <button type="button" class="ms-block-btn" data-action="{{this.action}}" data-key="{{this.key}}">
+    <button type="button" class="ms-block-btn{{#if this.danger}} ms-block-btn-danger{{/if}}" data-action="{{this.action}}" data-key="{{this.key}}">
       {{#if this.hasIcon}}<i class="fa-solid {{this.icon}}"></i>{{/if}}
       <span>{{this.label}}</span>
     </button>

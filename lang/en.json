@@ -14,6 +14,8 @@
   "MOBILE_SHEET.action.chat": "Post to chat",
   "MOBILE_SHEET.action.rest": "Rest",
 
+  "MOBILE_SHEET.stat.spellcast": "Spellcasting trait",
+
   "MOBILE_SHEET.dialog.add": "+ Add",
   "MOBILE_SHEET.dialog.subtract": "− Subtract",
 
@@ -64,11 +66,14 @@
   "MOBILE_SHEET.daggerheart.heading.background": "Background",
   "MOBILE_SHEET.daggerheart.heading.thresholds": "Damage Thresholds",
 
+  "MOBILE_SHEET.daggerheart.threshold.minor": "Minor",
   "MOBILE_SHEET.daggerheart.threshold.major": "Major",
   "MOBILE_SHEET.daggerheart.threshold.severe": "Severe",
 
   "MOBILE_SHEET.daggerheart.rest.short": "Short Rest",
   "MOBILE_SHEET.daggerheart.rest.long": "Long Rest",
+
+  "MOBILE_SHEET.daggerheart.deathMove": "Death Move",
 
   "MOBILE_SHEET.daggerheart.loadout.count": "{count} in loadout",
 

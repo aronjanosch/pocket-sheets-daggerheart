@@ -4,6 +4,7 @@
     <button type="button"
             class="ms-stat{{#unless this.tappable}} ms-stat-static{{/unless}}{{#if this.active}} ms-stat-active{{/if}}"
             {{#if this.tappable}}data-action="{{this.actionName}}" data-key="{{this.key}}"{{else}}disabled{{/if}}>
+      {{#if this.spellcast}}<i class="ms-stat-wand fa-solid fa-wand-magic-sparkles" data-tooltip="{{localize "MOBILE_SHEET.stat.spellcast"}}"></i>{{/if}}
       <span class="ms-stat-label">{{this.label}}</span>
       <span class="ms-stat-value">{{this.value}}</span>
       {{#if this.hasSub}}<span class="ms-stat-sub">{{this.sub}}</span>{{/if}}

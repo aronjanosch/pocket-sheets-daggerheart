@@ -81,27 +81,48 @@ function conditionsBlock(actor) {
 
 function traitsGrid(actor) {
   const sys = actor.system ?? {};
+  let scKey = null;
+  try { scKey = sys.spellcastModifierTrait?.key ?? null; } catch (_) { scKey = null; }
   const stats = TRAITS.map((key) => {
     const v = num(sys.traits?.[key]?.value ?? sys.traits?.[key]) ?? 0;
-    return { key, label: L(`trait.${key}`).slice(0, 3), value: mod(v), select: true };
+    const stat = { key, label: L(`trait.${key}`).slice(0, 3), value: mod(v), select: true };
+    if (key === scKey) stat.spellcast = true;
+    return stat;
   });
   return { kind: "statGrid", cols: 3, stats };
 }
 
-/** Damage thresholds (Major / Severe) — the system computes these in derived data. */
-function thresholdsBlocks(actor) {
+/**
+ * Damage thresholds as a compact scale below HP: the Minor / Major / Severe zones
+ * (1 / 2 / 3 HP marked) split by the Major and Severe boundary values.
+ */
+function thresholdsScale(actor) {
   const t = actor.system?.damageThresholds;
-  if (!t) return [];
+  if (!t) return null;
   const major = num(t.major);
   const severe = num(t.severe);
-  if (major == null && severe == null) return [];
-  return [
-    { kind: "heading", label: L("heading.thresholds") },
-    { kind: "statGrid", cols: 2, stats: [
-      { label: L("threshold.major"), value: major ?? 0 },
-      { label: L("threshold.severe"), value: severe ?? 0 }
-    ] }
-  ];
+  if (major == null && severe == null) return null;
+  return {
+    kind: "scale",
+    label: L("heading.thresholds"),
+    segments: [
+      { label: L("threshold.minor") },
+      { label: L("threshold.major") },
+      { label: L("threshold.severe") }
+    ],
+    bounds: [{ value: major ?? 0 }, { value: severe ?? 0 }]
+  };
+}
+
+/** Death-move button — only when the system says all HP are marked (viable). */
+function deathMoveButton(actor) {
+  let viable = false;
+  try { viable = !!actor.system?.deathMoveViable; } catch (_) { viable = false; }
+  if (!viable || !game.system?.api?.applications?.dialogs?.DeathMove) return null;
+  return {
+    kind: "buttons",
+    items: [{ label: L("deathMove"), action: "deathMove", icon: "fa-skull", variant: "danger" }]
+  };
 }
 
 /** Short / Long rest — open the system's own Downtime dialog. Omitted if absent. */
@@ -416,6 +437,13 @@ function openRest(actor, key) {
   return new Downtime(actor, key === "short").render({ force: true });
 }
 
+/** Open the system's Death Move dialog (when all HP are marked). */
+function openDeathMove(actor) {
+  const DeathMove = game.system?.api?.applications?.dialogs?.DeathMove;
+  if (!DeathMove) return;
+  return new DeathMove(actor).render({ force: true });
+}
+
 /**
  * Post an experience to chat. There is no document method for this — the system
  * builds the card inline in its sheet — so we mirror that build, reusing the
@@ -470,12 +498,13 @@ export const daggerheartAdapter = {
   /** PURE: actor.system → themed, tabbed view model. No async, no DOM, no writes. */
   getViewModel(actor) {
     const vitals = [
+      deathMoveButton(actor),
       conditionsBlock(actor),
       resourceBlock(actor, "hitPoints", L("resource.hitPoints"), "hp", "pips"),
+      thresholdsScale(actor),
       resourceBlock(actor, "stress", L("resource.stress"), "stress", "pips"),
       resourceBlock(actor, "hope", L("resource.hope"), "accent", "diamond"),
       resourceBlock(actor, "armor", L("resource.armor"), "armor", "pips"),
-      ...thresholdsBlocks(actor),
       { kind: "heading", label: L("heading.traits") },
       traitsGrid(actor),
       restButtons()
@@ -521,6 +550,8 @@ export const daggerheartAdapter = {
         return toggleVault(actor, intent.itemId);
       case "rest":
         return openRest(actor, intent.key);
+      case "deathMove":
+        return openDeathMove(actor);
       case "adjustResource":
         return adjustResource(actor, intent.key, intent.delta);
       case "setResource":

@@ -1,0 +1,11 @@
+{{!-- ScaleBlock: compact labeled scale — zone labels split by boundary values.
+      Daggerheart damage thresholds: Minor | major# | Major | severe# | Severe. --}}
+<section class="ms-block ms-scale">
+  {{#if hasLabel}}<span class="ms-scale-caption">{{label}}</span>{{/if}}
+  <div class="ms-scale-track">
+    {{#each parts}}
+      {{#if this.isSegment}}<span class="ms-scale-seg">{{this.label}}</span>{{/if}}
+      {{#if this.isBound}}<span class="ms-scale-bound">{{this.value}}</span>{{/if}}
+    {{/each}}
+  </div>
+</section>

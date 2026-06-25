@@ -47,7 +47,7 @@
 
 /**
  * @typedef {object} Intent
- * @property {"rollStat"|"useItem"|"openItem"|"adjustResource"|"setResource"|"toggleTag"|"toggleItem"|"toChat"|"expChat"|"equip"|"vault"|"rest"|"primary"} type
+ * @property {"rollStat"|"useItem"|"openItem"|"adjustResource"|"setResource"|"toggleTag"|"toggleItem"|"toChat"|"expChat"|"equip"|"vault"|"rest"|"deathMove"|"primary"} type
  * @property {string} [key]     Stat key (rollStat), resource key (adjustResource/setResource), tag key (toggleTag), experience id (expChat), or button key (rest: "short"/"long").
  * @property {string} [itemId]  Item id (useItem / openItem / toggleItem / toChat / equip / vault).
  * @property {string} [uuid]    Sub-document uuid (useItem on an item's individual action).
@@ -110,7 +110,7 @@
  */
 
 /**
- * @typedef {ResourceBlock|StatGridBlock|TagsBlock|ActionListBlock|InfoBlock|HeadingBlock|ButtonsBlock} Block
+ * @typedef {ResourceBlock|StatGridBlock|TagsBlock|ActionListBlock|InfoBlock|HeadingBlock|ButtonsBlock|ScaleBlock} Block
  */
 
 /**
@@ -153,6 +153,7 @@
  * @property {boolean} [save]     Show a save dot.
  * @property {boolean} [rollable] Tap -> rollStat.
  * @property {boolean} [select]   Tap -> arm the primary action (shell-local active state).
+ * @property {boolean} [spellcast] Mark this tile as the spellcasting trait (wand badge).
  */
 
 /**
@@ -234,6 +235,18 @@
  * @property {string} action  Intent type / registered shell action (e.g. "rest").
  * @property {string} [key]   Passed through as the intent `key` (e.g. "short").
  * @property {string} [icon]  FontAwesome class fragment, e.g. "fa-mug-hot".
+ * @property {"danger"} [variant] Visual emphasis (e.g. a death-move alert button).
+ */
+
+/**
+ * A compact labeled scale: ordered zone labels separated by boundary values.
+ * Used for Daggerheart damage thresholds (Minor | major# | Major | severe# | Severe).
+ * `bounds.length` must equal `segments.length - 1`.
+ * @typedef {object} ScaleBlock
+ * @property {"scale"} kind
+ * @property {string} [label]            Optional caption (e.g. "Damage Thresholds").
+ * @property {{label:string}[]} segments Zone labels, in order.
+ * @property {{value:number|string}[]} bounds Boundary values shown between segments.
  */
 
 export {};

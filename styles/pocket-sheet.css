@@ -760,6 +760,69 @@
 .ms-block-btn:active { border-color: var(--ms-accent); transform: scale(0.98); }
 .ms-block-btn > i { color: var(--ms-accent); }
 
+.ms-block-btn-danger {
+  border-color: color-mix(in oklab, #d6473c 55%, var(--ms-line2));
+  background: color-mix(in oklab, #d6473c 16%, var(--ms-surf));
+  color: #ffd9d4;
+}
+.ms-block-btn-danger > i { color: #ff6a5c; }
+.ms-block-btn-danger:active { border-color: #ff6a5c; }
+
+/* --- scale (damage thresholds) -------------------------------------------- */
+
+.ms-scale {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: -4px;
+}
+
+.ms-scale-caption {
+  font: 600 9px var(--ms-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ms-muted);
+}
+
+.ms-scale-track {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--ms-line2);
+  background: var(--ms-surf);
+}
+
+.ms-scale-seg {
+  flex: 1 1 0;
+  text-align: center;
+  font: 600 10px var(--ms-sans);
+  color: var(--ms-soft);
+}
+
+.ms-scale-bound {
+  flex: 0 0 auto;
+  min-width: 22px;
+  text-align: center;
+  font: 700 12px var(--ms-mono);
+  color: var(--ms-accent);
+  padding: 2px 6px;
+  border-radius: 7px;
+  background: color-mix(in oklab, var(--ms-accent) 12%, transparent);
+}
+
+/* spellcasting trait marker on a stat tile */
+.ms-stat { position: relative; }
+.ms-stat-wand {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  font-size: 9px;
+  color: var(--ms-accent);
+  opacity: 0.85;
+}
+
 /* --- info block ----------------------------------------------------------- */
 
 .ms-info-body { font-size: 14px; color: var(--ms-soft); }
