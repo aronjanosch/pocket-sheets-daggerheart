@@ -47,9 +47,10 @@
 
 /**
  * @typedef {object} Intent
- * @property {"rollStat"|"useItem"|"openItem"|"adjustResource"|"setResource"|"toggleTag"|"toggleItem"|"primary"} type
+ * @property {"rollStat"|"useItem"|"openItem"|"adjustResource"|"setResource"|"toggleTag"|"toggleItem"|"toChat"|"equip"|"vault"|"primary"} type
  * @property {string} [key]     Stat key (rollStat), resource key (adjustResource/setResource), or tag key (toggleTag).
- * @property {string} [itemId]  Item id (useItem / openItem / toggleItem).
+ * @property {string} [itemId]  Item id (useItem / openItem / toggleItem / toChat / equip / vault).
+ * @property {string} [uuid]    Sub-document uuid (useItem on an item's individual action).
  * @property {number} [delta]   Resource step (adjustResource), e.g. +1 / -1.
  * @property {number} [value]   Absolute resource value (setResource) from slide-to-set.
  * @property {string} [statKey] Active stat key the shell passes with a `primary` action.
@@ -184,6 +185,22 @@
  * @property {boolean} [costMuted] Render the cost chip muted (free/spent).
  * @property {string} [badge]    Right-side badge (damage, "LV 2", "AT WILL").
  * @property {boolean} [toggle]  Prepared/equipped toggle -> toggleItem intent.
+ * @property {boolean} [use]     Whether tapping the row uses the item (-> useItem). Default true.
+ * @property {SubAction[]} [actions] Inline buttons for an item's own actions (Daggerheart: "Mark a Stress", etc).
+ * @property {Control[]} [controls]  Small control icons (equip / vault / post-to-chat).
+ *
+ * A button for one of an item's embedded actions. Tapping uses that action,
+ * which the system resolves (spending its cost — mark stress, spend hope…).
+ * @typedef {object} SubAction
+ * @property {string} uuid       Action sub-document uuid; -> useItem intent with `uuid`.
+ * @property {string} name       Display-ready action name.
+ * @property {string} [icon]     FontAwesome class fragment, e.g. "fa-dice-d20".
+ * @property {string} [uses]     Remaining/max uses chip, e.g. "2/3".
+ *
+ * A small control icon on an item row. The shell owns each kind's icon + intent.
+ * @typedef {object} Control
+ * @property {"equip"|"vault"|"chat"} kind
+ * @property {boolean} [active]  Toggle state (equipped, or stored in vault).
  */
 
 /**

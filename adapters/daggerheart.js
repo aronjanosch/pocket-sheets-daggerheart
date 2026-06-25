@@ -93,53 +93,142 @@ function itemRows(actor, types, map) {
   return list.map(map);
 }
 
-function domainCardsTab(actor) {
-  const rows = itemRows(actor, ["domainCard"], (i) => {
-    const domain = i.system?.domain ?? "";
-    const level = num(i.system?.level);
-    const sub = [domain, level != null ? `${L("label.level")} ${level}` : null].filter(Boolean).join(" · ");
-    const recall = num(i.system?.recallCost ?? i.system?.recall);
-    const row = { itemId: i.id, name: i.name, sub, glyph: "✦" };
-    if (typeof recall === "number" && recall > 0) { row.cost = `↺${recall}`; row.costMuted = true; }
-    return row;
-  });
-  if (!rows.length) return [];
-  return [
-    { kind: "heading", label: L("heading.domainCards"), count: game.i18n.format("MOBILE_SHEET.daggerheart.loadout.count", { count: rows.length }) },
-    { kind: "actionList", items: rows }
-  ];
+/** A function on a document, regardless of own vs prototype. */
+const can = (doc, method) => typeof doc?.[method] === "function";
+
+/** Normalize an item's embedded actions (Collection | array) to a flat list. */
+function actionList(item) {
+  const a = item?.system?.actions;
+  if (!a) return [];
+  if (Array.isArray(a)) return a;
+  if (typeof a.values === "function") return [...a.values()];
+  if (Array.isArray(a.contents)) return a.contents;
+  return [];
 }
 
-function weaponsSection(actor) {
-  let weapons = actor.items?.filter((i) => i.type === "weapon") ?? [];
-  if (weapons.some((w) => "equipped" in (w.system ?? {}))) {
-    weapons = weapons.filter((w) => w.system?.equipped);
+/** Inline buttons for an item's own actions (the "Mark a Stress" affordances). */
+function actionButtons(item) {
+  return actionList(item)
+    .map((a) => {
+      if (!a?.uuid) return null;
+      const btn = { uuid: a.uuid, name: a.name ?? "", icon: a.typeIcon };
+      const max = a.uses?.max;
+      if (max) btn.uses = `${a.remainingUses ?? 0}/${max}`;
+      return btn;
+    })
+    .filter(Boolean);
+}
+
+/** Post-to-chat control, present only when the item supports it. */
+function chatControl(item) {
+  return can(item, "toChat") ? [{ kind: "chat" }] : [];
+}
+
+function attachActions(row, item) {
+  const acts = actionButtons(item);
+  if (acts.length) row.actions = acts;
+  return row;
+}
+
+function domainCardRow(item) {
+  const domain = item.system?.domain ?? "";
+  const level = num(item.system?.level);
+  const sub = [domain, level != null ? `${L("label.level")} ${level}` : null].filter(Boolean).join(" · ");
+  const row = { itemId: item.id, name: item.name, img: item.img, glyph: "✦", sub, use: can(item, "use") };
+  const recall = num(item.system?.recallCost ?? item.system?.recall);
+  if (typeof recall === "number" && recall > 0) { row.cost = `↺${recall}`; row.costMuted = true; }
+  attachActions(row, item);
+  row.controls = [{ kind: "vault", active: !!item.system?.inVault }, ...chatControl(item)];
+  return row;
+}
+
+/** Loadout = the two domain-card piles the system maintains: loadout and vault. */
+function loadoutTab(actor) {
+  const dc = actor.system?.domainCards;
+  const loadout = dc?.loadout ?? [];
+  const vault = dc?.vault ?? [];
+  const blocks = [];
+  if (loadout.length) {
+    blocks.push({ kind: "heading", label: L("heading.loadout"), count: loadout.length });
+    blocks.push({ kind: "actionList", items: loadout.map(domainCardRow) });
   }
-  const rows = weapons.map((w) => {
-    const trait = w.system?.trait ?? "";
-    const range = w.system?.range ?? "";
-    const damage = num(w.system?.damage) ?? w.system?.damage?.value ?? "";
-    const row = { itemId: w.id, name: w.name, glyph: "⚔", sub: [trait, range].filter(Boolean).join(" · ") };
-    if (damage) row.badge = String(damage);
-    return row;
-  });
-  if (!rows.length) return [];
-  return [
-    { kind: "heading", label: L("heading.equipped") },
-    { kind: "actionList", items: rows }
-  ];
+  if (vault.length) {
+    blocks.push({ kind: "heading", label: L("heading.vault"), count: vault.length });
+    blocks.push({ kind: "actionList", items: vault.map(domainCardRow) });
+  }
+  return blocks;
 }
 
+function weaponRow(w) {
+  const trait = w.system?.trait ?? "";
+  const range = w.system?.range ?? "";
+  const damage = num(w.system?.damage) ?? w.system?.damage?.value ?? "";
+  const row = {
+    itemId: w.id, name: w.name, img: w.img, glyph: "⚔",
+    sub: [trait, range].filter(Boolean).join(" · "),
+    use: can(w, "use")
+  };
+  if (damage) row.badge = String(damage);
+  attachActions(row, w);
+  row.controls = [{ kind: "equip", active: !!w.system?.equipped }, ...chatControl(w)];
+  return row;
+}
+
+function armorRow(a) {
+  const score = num(a.system?.baseScore ?? a.system?.score);
+  const row = { itemId: a.id, name: a.name, img: a.img, glyph: "🛡", use: can(a, "use") };
+  if (score != null) row.badge = String(score);
+  attachActions(row, a);
+  row.controls = [{ kind: "equip", active: !!a.system?.equipped }, ...chatControl(a)];
+  return row;
+}
+
+function stuffRow(i) {
+  const qty = num(i.system?.quantity);
+  const row = {
+    itemId: i.id, name: i.name, img: i.img, glyph: "◈",
+    sub: typeof qty === "number" && qty > 1 ? `×${qty}` : "",
+    use: can(i, "use")
+  };
+  attachActions(row, i);
+  const controls = chatControl(i);
+  if (controls.length) row.controls = controls;
+  return row;
+}
+
+function featureRow(item) {
+  const row = { itemId: item.id, name: item.name, img: item.img, use: can(item, "use") };
+  attachActions(row, item);
+  const controls = chatControl(item);
+  if (controls.length) row.controls = controls;
+  return row;
+}
+
+/**
+ * Features grouped by their source the way the system sheet groups them:
+ * Ancestry / Community / Class / Subclass / Companion, then loose features.
+ * Reuses the system's own `sheetLists` getter so grouping stays correct; falls
+ * back to a flat feature list if that getter is unavailable on this version.
+ */
 function featuresTab(actor) {
   const blocks = [];
   const exp = experiencesBlock(actor);
   if (exp) blocks.push(exp);
 
-  const rows = itemRows(actor, ["ancestry", "community", "class", "subclass", "feature"], (i) => ({
-    itemId: i.id,
-    name: i.name,
-    sub: typeLabel(i.type)
-  }));
+  let lists = null;
+  try { lists = actor.system?.sheetLists; } catch (_) { lists = null; }
+
+  if (lists && typeof lists === "object") {
+    for (const cat of Object.values(lists)) {
+      const vals = cat?.values ?? [];
+      if (!vals.length) continue;
+      blocks.push({ kind: "heading", label: cat.title ?? L("heading.features"), count: vals.length });
+      blocks.push({ kind: "actionList", items: vals.map(featureRow) });
+    }
+    return blocks;
+  }
+
+  const rows = itemRows(actor, ["ancestry", "community", "class", "subclass", "feature"], featureRow);
   if (rows.length) {
     blocks.push({ kind: "heading", label: L("heading.features") });
     blocks.push({ kind: "actionList", items: rows });
@@ -163,6 +252,7 @@ function experiencesBlock(actor) {
   return { kind: "info", title: L("list.experiences"), html: `<ul>${rows}</ul>` };
 }
 
+/** Inventory: gold, then the system's inventory categories with equip controls. */
 function itemsTab(actor) {
   const blocks = [];
 
@@ -176,12 +266,16 @@ function itemsTab(actor) {
     }
   }
 
-  const rows = itemRows(actor, ["consumable", "loot", "miscellaneous"], (i) => {
-    const qty = num(i.system?.quantity);
-    return { itemId: i.id, name: i.name, sub: typeof qty === "number" && qty > 1 ? `×${qty}` : "" };
-  });
-  if (rows.length) {
-    blocks.push({ kind: "heading", label: L("heading.inventory") });
+  const sections = [
+    ["weapon", weaponRow],
+    ["armor", armorRow],
+    ["consumable", stuffRow],
+    ["loot", stuffRow]
+  ];
+  for (const [type, map] of sections) {
+    const rows = itemRows(actor, [type], map);
+    if (!rows.length) continue;
+    blocks.push({ kind: "heading", label: typeLabel(type), count: rows.length });
     blocks.push({ kind: "actionList", items: rows });
   }
   return blocks;
@@ -249,6 +343,40 @@ function adjustResource(actor, key, delta) {
   return writeResource(actor, key, (res.value ?? 0) + delta);
 }
 
+/** Toggle equipped. Armor is exclusive (only one worn) — unequip the other first. */
+async function toggleEquip(actor, itemId) {
+  const item = actor.items?.get(itemId);
+  if (!item) return;
+  if (item.system?.equipped) return item.update({ "system.equipped": false });
+  if (item.type === "armor") {
+    const worn = actor.items.find((i) => i.type === "armor" && i.system?.equipped && i.id !== item.id);
+    if (worn) await worn.update({ "system.equipped": false });
+  }
+  return item.update({ "system.equipped": true });
+}
+
+/** Post an item to chat via the system's own card builder. */
+function postToChat(actor, itemId) {
+  const item = actor.items?.get(itemId);
+  return can(item, "toChat") ? item.toChat(item.uuid) : undefined;
+}
+
+/** Move a domain card between loadout and vault. */
+function toggleVault(actor, itemId) {
+  const item = actor.items?.get(itemId);
+  if (!item) return;
+  return item.update({ "system.inVault": !item.system?.inVault });
+}
+
+/** Use an item, or one of its embedded actions when an action uuid is given. */
+async function useItem(actor, intent) {
+  if (intent.uuid) {
+    const action = await fromUuid(intent.uuid);
+    return can(action, "use") ? action.use({}) : undefined;
+  }
+  return actor.items?.get(intent.itemId)?.use?.(intent.event);
+}
+
 // --- adapter -----------------------------------------------------------------
 
 /** @type {PocketSheetAdapter} */
@@ -282,7 +410,7 @@ export const daggerheartAdapter = {
       traitsGrid(actor)
     ].filter(Boolean);
 
-    const loadout = [...domainCardsTab(actor), ...weaponsSection(actor)];
+    const loadout = loadoutTab(actor);
 
     const tabs = [{ id: "vitals", label: L("tab.vitals"), blocks: vitals }];
     const features = featuresTab(actor);
@@ -309,9 +437,15 @@ export const daggerheartAdapter = {
       case "rollStat":
         return actor.rollTrait?.(intent.statKey ?? intent.key, { event: intent.event });
       case "useItem":
-        return actor.items.get(intent.itemId)?.use?.(intent.event);
+        return useItem(actor, intent);
       case "openItem":
         return actor.items.get(intent.itemId)?.sheet?.render(true);
+      case "toChat":
+        return postToChat(actor, intent.itemId);
+      case "equip":
+        return toggleEquip(actor, intent.itemId);
+      case "vault":
+        return toggleVault(actor, intent.itemId);
       case "adjustResource":
         return adjustResource(actor, intent.key, intent.delta);
       case "setResource":

@@ -9,6 +9,10 @@
 
   "MOBILE_SHEET.error.actionFailed": "Pocket Sheet: that action failed.",
 
+  "MOBILE_SHEET.action.equip": "Equip / Unequip",
+  "MOBILE_SHEET.action.vault": "Move to vault / loadout",
+  "MOBILE_SHEET.action.chat": "Post to chat",
+
   "MOBILE_SHEET.dialog.add": "+ Add",
   "MOBILE_SHEET.dialog.subtract": "− Subtract",
 
@@ -50,6 +54,8 @@
 
   "MOBILE_SHEET.daggerheart.heading.traits": "Traits",
   "MOBILE_SHEET.daggerheart.heading.domainCards": "Domain Cards",
+  "MOBILE_SHEET.daggerheart.heading.loadout": "Loadout",
+  "MOBILE_SHEET.daggerheart.heading.vault": "Vault",
   "MOBILE_SHEET.daggerheart.heading.equipped": "Equipped",
   "MOBILE_SHEET.daggerheart.heading.features": "Features",
   "MOBILE_SHEET.daggerheart.heading.inventory": "Items",
@@ -67,6 +73,10 @@
   "MOBILE_SHEET.daggerheart.type.class": "Class",
   "MOBILE_SHEET.daggerheart.type.subclass": "Subclass",
   "MOBILE_SHEET.daggerheart.type.feature": "Feature",
+  "MOBILE_SHEET.daggerheart.type.weapon": "Weapons",
+  "MOBILE_SHEET.daggerheart.type.armor": "Armor",
+  "MOBILE_SHEET.daggerheart.type.consumable": "Consumables",
+  "MOBILE_SHEET.daggerheart.type.loot": "Loot",
 
   "MOBILE_SHEET.daggerheart.list.experiences": "Experiences",
 

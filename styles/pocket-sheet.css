@@ -556,20 +556,99 @@
 
 .ms-action-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 11px;
+  gap: 6px 8px;
   width: 100%;
-  min-height: var(--ms-tap-min);
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 13px;
   border: 1px solid var(--ms-line2);
   background: var(--ms-surf);
-  color: var(--ms-fg);
-  cursor: pointer;
   box-shadow: inset 0 1px 0 #ffffff06;
 }
 
-.ms-action-row:active { border-color: var(--ms-accent); transform: scale(0.99); }
+.ms-action-main {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex: 1 1 60%;
+  min-width: 0;
+  min-height: var(--ms-tap-min);
+  color: var(--ms-fg);
+  cursor: pointer;
+}
+
+.ms-action-main.ms-action-static { cursor: default; }
+.ms-action-main:not(.ms-action-static):active { transform: scale(0.99); }
+
+/* Item controls: equip / vault / post-to-chat */
+.ms-action-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.ms-ctrl {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  border: 1px solid var(--ms-line2);
+  background: var(--ms-surf2);
+  color: var(--ms-soft);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ms-ctrl:active { transform: scale(0.94); }
+
+.ms-ctrl.ms-on {
+  color: var(--ms-accent);
+  border-color: color-mix(in oklab, var(--ms-accent) 45%, transparent);
+  background: color-mix(in oklab, var(--ms-accent) 14%, transparent);
+}
+
+/* An item's own action buttons (Mark a Stress, etc) — wrap to a row beneath */
+.ms-action-buttons {
+  flex-basis: 100%;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 8px;
+  margin-top: 2px;
+  border-top: 1px solid var(--ms-line2);
+}
+
+.ms-act-btn {
+  flex: 1 1 auto;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--ms-line2);
+  background: var(--ms-surf2);
+  color: var(--ms-fg);
+  cursor: pointer;
+}
+
+.ms-act-btn:active { border-color: var(--ms-accent); transform: scale(0.98); }
+.ms-act-btn > i { color: var(--ms-accent); font-size: 13px; }
+.ms-act-name { font: 600 12px var(--ms-sans); }
+.ms-act-uses {
+  font: 700 10px var(--ms-mono);
+  color: var(--ms-muted);
+  padding: 2px 6px;
+  border-radius: 7px;
+  background: var(--ms-raise);
+}
 
 .ms-action-img {
   width: 34px;

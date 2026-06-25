@@ -1,24 +1,47 @@
-{{!-- ActionListBlock: tappable item rows. Tap → useItem; long-press/right-click → openItem;
-      optional glyph/img, prepared toggle (toggleItem), cost chip, and badge. --}}
+{{!-- ActionListBlock: item rows. The main area uses the item (when useable);
+      long-press/right-click opens it. Controls (equip/vault/chat) and an item's
+      own action buttons (mark stress, etc) each dispatch their own intent. --}}
 <section class="ms-block ms-actionlist">
   {{#if hasTitle}}<h3 class="ms-list-title">{{title}}</h3>{{/if}}
   <ul class="ms-list">
     {{#each items}}
-      <li class="ms-action-row" data-action="useItem" data-item-id="{{this.itemId}}"
-          data-secondary-action="openItem">
-        {{#if this.hasImg}}<img class="ms-action-img" src="{{this.img}}" alt="">{{/if}}
-        {{#if this.hasGlyph}}<span class="ms-action-glyph">{{this.glyph}}</span>{{/if}}
-        <span class="ms-action-text">
-          <span class="ms-action-name">{{this.name}}</span>
-          {{#if this.hasSub}}<span class="ms-action-sub">{{this.sub}}</span>{{/if}}
-        </span>
-        {{#if this.hasToggle}}
-          <button type="button" class="ms-action-toggle{{#if this.toggleOn}} ms-on{{/if}}"
-                  data-action="toggleItem" data-item-id="{{this.itemId}}"
-                  aria-label="Toggle prepared"></button>
+      <li class="ms-action-row">
+        <div class="ms-action-main{{#unless this.useable}} ms-action-static{{/unless}}"
+             {{#if this.useable}}data-action="useItem"{{/if}}
+             data-secondary-action="openItem" data-item-id="{{this.itemId}}">
+          {{#if this.hasImg}}<img class="ms-action-img" src="{{this.img}}" alt="">{{/if}}
+          {{#if this.hasGlyph}}<span class="ms-action-glyph">{{this.glyph}}</span>{{/if}}
+          <span class="ms-action-text">
+            <span class="ms-action-name">{{this.name}}</span>
+            {{#if this.hasSub}}<span class="ms-action-sub">{{this.sub}}</span>{{/if}}
+          </span>
+          {{#if this.hasCost}}<span class="ms-action-cost{{#if this.costMuted}} ms-cost-muted{{/if}}">{{this.cost}}</span>{{/if}}
+          {{#if this.hasBadge}}<span class="ms-action-badge">{{this.badge}}</span>{{/if}}
+        </div>
+
+        {{#if this.hasControls}}
+          <div class="ms-action-controls">
+            {{#each this.controls}}
+              <button type="button" class="ms-ctrl{{#if this.active}} ms-on{{/if}}"
+                      data-action="{{this.action}}" data-item-id="{{this.itemId}}"
+                      aria-label="{{this.label}}" data-tooltip="{{this.label}}">
+                <i class="{{this.icon}}"></i>
+              </button>
+            {{/each}}
+          </div>
         {{/if}}
-        {{#if this.hasCost}}<span class="ms-action-cost{{#if this.costMuted}} ms-cost-muted{{/if}}">{{this.cost}}</span>{{/if}}
-        {{#if this.hasBadge}}<span class="ms-action-badge">{{this.badge}}</span>{{/if}}
+
+        {{#if this.hasActions}}
+          <div class="ms-action-buttons">
+            {{#each this.actions}}
+              <button type="button" class="ms-act-btn" data-action="useItem" data-item-uuid="{{this.uuid}}">
+                <i class="fa-solid {{this.icon}}"></i>
+                <span class="ms-act-name">{{this.name}}</span>
+                {{#if this.hasUses}}<span class="ms-act-uses">{{this.uses}}</span>{{/if}}
+              </button>
+            {{/each}}
+          </div>
+        {{/if}}
       </li>
     {{/each}}
   </ul>

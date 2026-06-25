@@ -32,6 +32,17 @@ const TONE_CLASS = {
 
 const clampPct = (v, m) => (!m || m <= 0 ? 0 : Math.max(0, Math.min(100, (v / m) * 100)));
 
+/**
+ * Item-row control kinds → their shell-owned icon + intent. The adapter only
+ * names the kind (and a toggle `active` state); the shell owns the chrome. Each
+ * `icon`/`onIcon` is a FontAwesome class (Foundry ships FA globally).
+ */
+const CONTROL_DEF = {
+  equip: { action: "equip", icon: "fa-solid fa-shield-halved", labelKey: "MOBILE_SHEET.action.equip" },
+  vault: { action: "vault", icon: "fa-solid fa-arrow-down", onIcon: "fa-solid fa-arrow-up", labelKey: "MOBILE_SHEET.action.vault" },
+  chat: { action: "toChat", icon: "fa-regular fa-message", labelKey: "MOBILE_SHEET.action.chat" }
+};
+
 export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   /** @type {Record<string, number>} live re-render hook ids, removed on close. */
   #hookIds = {};
@@ -47,6 +58,9 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       rollStat: PocketSheet.#onRollStat,
       useItem: PocketSheet.#onUseItem,
       openItem: PocketSheet.#onOpenItem,
+      toChat: PocketSheet.#onToChat,
+      equip: PocketSheet.#onEquip,
+      vault: PocketSheet.#onVault,
       adjustResource: PocketSheet.#onAdjustResource,
       toggleTag: PocketSheet.#onToggleTag,
       toggleItem: PocketSheet.#onToggleItem,
@@ -250,23 +264,50 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       kind: "actionList",
       title: b.title,
       hasTitle: !!b.title,
-      items: (b.items ?? []).map((i) => ({
-        itemId: i.itemId,
-        name: i.name,
-        sub: i.sub ?? "",
-        hasSub: !!i.sub,
-        img: i.img,
-        hasImg: !!i.img,
-        glyph: i.glyph ?? "",
-        hasGlyph: !i.img && !!i.glyph,
-        cost: i.cost ?? "",
-        hasCost: i.cost != null,
-        costMuted: !!i.costMuted,
-        badge: i.badge ?? "",
-        hasBadge: i.badge != null,
-        hasToggle: i.toggle != null,
-        toggleOn: !!i.toggle
-      }))
+      items: (b.items ?? []).map((i) => {
+        const controls = (i.controls ?? [])
+          .map((c) => {
+            const def = CONTROL_DEF[c.kind];
+            if (!def) return null;
+            return {
+              itemId: i.itemId,
+              action: def.action,
+              icon: c.active && def.onIcon ? def.onIcon : def.icon,
+              active: !!c.active,
+              label: game.i18n.localize(def.labelKey)
+            };
+          })
+          .filter(Boolean);
+        const actions = (i.actions ?? []).map((a) => ({
+          uuid: a.uuid,
+          name: a.name,
+          icon: a.icon ?? "fa-bolt",
+          uses: a.uses ?? "",
+          hasUses: !!a.uses
+        }));
+        return {
+          itemId: i.itemId,
+          name: i.name,
+          sub: i.sub ?? "",
+          hasSub: !!i.sub,
+          img: i.img,
+          hasImg: !!i.img,
+          glyph: i.glyph ?? "",
+          hasGlyph: !i.img && !!i.glyph,
+          cost: i.cost ?? "",
+          hasCost: i.cost != null,
+          costMuted: !!i.costMuted,
+          badge: i.badge ?? "",
+          hasBadge: i.badge != null,
+          hasToggle: i.toggle != null,
+          toggleOn: !!i.toggle,
+          useable: i.use !== false,
+          controls,
+          hasControls: controls.length > 0,
+          actions,
+          hasActions: actions.length > 0
+        };
+      })
     };
   }
 
@@ -290,11 +331,28 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   static #onUseItem(event, target) {
-    return this.#dispatch({ type: "useItem", itemId: target.dataset.itemId, event });
+    return this.#dispatch({
+      type: "useItem",
+      itemId: target.dataset.itemId,
+      uuid: target.dataset.itemUuid,
+      event
+    });
   }
 
   static #onOpenItem(event, target) {
     return this.#dispatch({ type: "openItem", itemId: target.dataset.itemId, event });
+  }
+
+  static #onToChat(event, target) {
+    return this.#dispatch({ type: "toChat", itemId: target.dataset.itemId, event });
+  }
+
+  static #onEquip(event, target) {
+    return this.#dispatch({ type: "equip", itemId: target.dataset.itemId, event });
+  }
+
+  static #onVault(event, target) {
+    return this.#dispatch({ type: "vault", itemId: target.dataset.itemId, event });
   }
 
   static #onAdjustResource(event, target) {
