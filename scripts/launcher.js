@@ -59,6 +59,57 @@ export function registerActivationSettings() {
     },
     default: "auto"
   });
+
+  // Phone = pure sheet device: drive Foundry's `core.noCanvas` so the WebGL map
+  // never renders here (saves battery/memory). Client-scoped, so this device
+  // only — never touches the GM's desktop.
+  game.settings.register(MODULE_ID, "disableCanvasOnMobile", {
+    name: "MOBILE_SHEET.settings.disableCanvasOnMobile.name",
+    hint: "MOBILE_SHEET.settings.disableCanvasOnMobile.hint",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  // Internal: remembers that WE flipped `core.noCanvas`, so we only ever revert
+  // our own change and leave a player's manual "Disable Canvas" choice alone.
+  game.settings.register(MODULE_ID, "canvasManaged", {
+    scope: "client",
+    config: false,
+    type: Boolean,
+    default: false
+  });
+}
+
+// --- canvas mode -----------------------------------------------------------
+
+/**
+ * Sync Foundry's `core.noCanvas` with mobile state, then reload if it changed.
+ * Canvas initializes once at startup, so the setting only takes effect after a
+ * reload — we trigger exactly one. Call from `init`, before the canvas draws.
+ *
+ * Two-way and idempotent:
+ *   want && !off            → disable canvas, mark managed, reload.
+ *   !want && off && managed → re-enable canvas, clear managed, reload.
+ *   want && off && !managed → leave alone (player disabled it themselves).
+ */
+export async function applyMobileCanvasMode() {
+  if (!game.settings.get(MODULE_ID, "disableCanvasOnMobile")) return;
+
+  const want = isMobile();
+  const off = game.settings.get("core", "noCanvas");
+  const managed = game.settings.get(MODULE_ID, "canvasManaged");
+
+  if (want && !off) {
+    await game.settings.set(MODULE_ID, "canvasManaged", true);
+    await game.settings.set("core", "noCanvas", true);
+    location.reload();
+  } else if (!want && off && managed) {
+    await game.settings.set(MODULE_ID, "canvasManaged", false);
+    await game.settings.set("core", "noCanvas", false);
+    location.reload();
+  }
 }
 
 // --- actor resolution ------------------------------------------------------

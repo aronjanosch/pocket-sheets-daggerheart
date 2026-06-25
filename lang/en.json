@@ -37,6 +37,9 @@
   "MOBILE_SHEET.settings.activation.always": "Always (also on desktop)",
   "MOBILE_SHEET.settings.activation.never": "Never (open it manually)",
 
+  "MOBILE_SHEET.settings.disableCanvasOnMobile.name": "Disable map on phones",
+  "MOBILE_SHEET.settings.disableCanvasOnMobile.hint": "On phones/tablets, turn off Foundry's map canvas so this device is a pure character sheet — saves battery and memory. Reloads once when it changes.",
+
   "MOBILE_SHEET.launcher.fabTitle": "Open mobile sheet",
   "MOBILE_SHEET.launcher.selectTitle": "Choose a character",
 

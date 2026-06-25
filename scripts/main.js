@@ -15,7 +15,7 @@
 import { MODULE_ID } from "./constants.js";
 import { register, resolve } from "./registry.js";
 import { PocketSheet, registerPocketSheet } from "./sheet.js";
-import { registerActivationSettings, activateLauncher } from "./launcher.js";
+import { registerActivationSettings, activateLauncher, applyMobileCanvasMode } from "./launcher.js";
 import { stubAdapter } from "./stub-adapter.js";
 import { daggerheartAdapter } from "../adapters/daggerheart.js";
 
@@ -59,6 +59,10 @@ Hooks.once("init", () => {
 
   // Activation layer: when/where to auto-present the sheet (Phase 3).
   registerActivationSettings();
+
+  // Phone = pure sheet device: kill the map canvas here before it draws.
+  // May reload the page once; the rest of init is harmless if it does.
+  applyMobileCanvasMode();
 
   // Built-in adapters self-register here.
   register(daggerheartAdapter);
