@@ -87,7 +87,9 @@ export function registerActivationSettings() {
 /**
  * Sync Foundry's `core.noCanvas` with mobile state, then reload if it changed.
  * Canvas initializes once at startup, so the setting only takes effect after a
- * reload — we trigger exactly one. Call from `init`, before the canvas draws.
+ * reload — we trigger exactly one. Call from the `setup` hook: core registers
+ * `noCanvas` after `init` (so reading it at `init` throws), and `setup` still
+ * runs before the canvas is drawn — the reload aborts the load either way.
  *
  * Two-way and idempotent:
  *   want && !off            → disable canvas, mark managed, reload.
@@ -96,6 +98,12 @@ export function registerActivationSettings() {
  */
 export async function applyMobileCanvasMode() {
   if (!game.settings.get(MODULE_ID, "disableCanvasOnMobile")) return;
+
+  // Defensive: if core ever renames/drops the setting, don't throw — bail.
+  if (!game.settings.settings.has("core.noCanvas")) {
+    console.warn(`${MODULE_ID} | "core.noCanvas" not registered — skipping canvas mode`);
+    return;
+  }
 
   const want = isMobile();
   const off = game.settings.get("core", "noCanvas");

@@ -60,10 +60,6 @@ Hooks.once("init", () => {
   // Activation layer: when/where to auto-present the sheet (Phase 3).
   registerActivationSettings();
 
-  // Phone = pure sheet device: kill the map canvas here before it draws.
-  // May reload the page once; the rest of init is harmless if it does.
-  applyMobileCanvasMode();
-
   // Built-in adapters self-register here.
   register(daggerheartAdapter);
 
@@ -71,6 +67,11 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("setup", () => {
+  // Phone = pure sheet device: kill the map canvas before it draws. Runs here,
+  // not at `init` — core registers `core.noCanvas` only after the `init` phase.
+  // May reload the page once; the rest of setup is harmless if it does.
+  applyMobileCanvasMode();
+
   // After every module's `init` — third-party adapters listening for this register now.
   Hooks.callAll("pocketSheet.ready", api);
 });
