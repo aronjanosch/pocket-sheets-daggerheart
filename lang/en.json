@@ -16,8 +16,17 @@
 
   "MOBILE_SHEET.stat.spellcast": "Spellcasting trait",
 
-  "MOBILE_SHEET.dialog.add": "+ Add",
-  "MOBILE_SHEET.dialog.subtract": "− Subtract",
+  "MOBILE_SHEET.dialog.add": "Add",
+  "MOBILE_SHEET.dialog.subtract": "Subtract",
+  "MOBILE_SHEET.dialog.amount": "Amount",
+  "MOBILE_SHEET.dialog.done": "Done",
+
+  "MOBILE_SHEET.roll.title": "Roll",
+  "MOBILE_SHEET.roll.advantage": "Advantage",
+  "MOBILE_SHEET.roll.normal": "Normal",
+  "MOBILE_SHEET.roll.disadvantage": "Disadvantage",
+  "MOBILE_SHEET.roll.difficulty": "Difficulty",
+  "MOBILE_SHEET.roll.roll": "Roll",
 
   "MOBILE_SHEET.settings.devStub.name": "Developer: stub adapter",
   "MOBILE_SHEET.settings.devStub.hint": "Register a dummy adapter that renders one of each block kind, for testing the shell without a real system adapter. Reload after changing.",

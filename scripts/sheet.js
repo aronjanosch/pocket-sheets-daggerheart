@@ -361,7 +361,8 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   static #onRollStat(event, target) {
-    return this.#dispatch({ type: "rollStat", key: target.dataset.key, event });
+    const label = target.querySelector(".ms-stat-label")?.textContent ?? "";
+    return this.#openRollSheet(target.dataset.key, label, event);
   }
 
   static #onUseItem(event, target) {
@@ -419,7 +420,9 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   static #onPrimary(event, target) {
-    return this.#dispatch({ type: "primary", statKey: this.#activeStatKey, event });
+    const tile = this.element?.querySelector(".ms-stat-active");
+    const label = tile?.querySelector(".ms-stat-label")?.textContent ?? "";
+    return this.#openRollSheet(this.#activeStatKey, label, event);
   }
 
   // --- shell-local actions (no adapter) -------------------------------------
@@ -523,7 +526,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         if (moved) {
           if (v !== startV) this.#dispatch({ type: "setResource", key, value: v, event: ev });
         } else {
-          this.#openResourceDialog(key, label); // a tap → +/- amount dialog
+          this.#openAdjustSheet({ key, label, value: Number(curEl?.textContent) || 0, max }); // tap → adjust sheet
         }
       };
       const cancel = (ev) => {
@@ -539,29 +542,147 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
-   * Tap a resource track → a small dialog to add or subtract an amount. Dispatches
-   * a delta via adjustResource (the adapter clamps and writes). Shell-owned UI; no
-   * system knowledge.
+   * Mount an app-like bottom sheet inside the sheet root: a dimmed backdrop and a
+   * panel that slides up from the bottom. Returns the wrapper + a `close()` that
+   * removes it. The caller wires the backdrop / close affordances (so an "adjust"
+   * sheet can commit on dismiss while a "roll" sheet just cancels). Shell-owned
+   * chrome, theme-aware via the inherited --ms-accent vars; no system knowledge.
    */
-  async #openResourceDialog(key, label) {
-    const DialogV2 = foundry.applications?.api?.DialogV2;
-    if (!DialogV2) return;
-    const safe = Handlebars.escapeExpression(label);
-    const content = `<div class="ms-amt-dialog">
-      <label class="ms-amt-label">${safe}</label>
-      <input type="number" name="amt" class="ms-amt-input" inputmode="numeric" min="0" step="1" value="1" autofocus>
-    </div>`;
-    const read = (dialog) => Math.abs(Number(dialog?.element?.querySelector('input[name="amt"]')?.value) || 0);
-    const delta = await DialogV2.wait({
-      window: { title: label, icon: "fa-solid fa-plus-minus" },
-      content,
-      rejectClose: false,
-      buttons: [
-        { action: "sub", label: game.i18n.localize("MOBILE_SHEET.dialog.subtract"), callback: (e, b, d) => -read(d) },
-        { action: "add", label: game.i18n.localize("MOBILE_SHEET.dialog.add"), default: true, callback: (e, b, d) => read(d) }
-      ]
-    }).catch(() => null);
-    if (delta) this.#dispatch({ type: "adjustResource", key, delta });
+  #mountSheet(html) {
+    const root = this.element?.querySelector(".ms-root") ?? this.element;
+    if (!root) return null;
+    root.querySelector(".ms-sheet-overlay")?.remove(); // never stack sheets
+    const wrap = document.createElement("div");
+    wrap.className = "ms-sheet-overlay";
+    wrap.innerHTML = `<div class="ms-sheet-backdrop"></div><div class="ms-sheet-panel">${html}</div>`;
+    root.appendChild(wrap);
+    return { wrap, close: () => wrap.remove() };
+  }
+
+  /**
+   * Tap a resource → a bottom sheet to add or subtract an amount. The preview is
+   * local (live value + delta + 1/2/5/10 step); the net change commits once on
+   * dismiss via a setResource intent (the adapter clamps and writes). No system
+   * knowledge, no write-per-tap.
+   */
+  #openAdjustSheet({ key, label, value, max }) {
+    const L = (k) => game.i18n.localize(`MOBILE_SHEET.dialog.${k}`);
+    const hasMax = typeof max === "number" && max > 0;
+    const safe = Handlebars.escapeExpression(label ?? "");
+    const chips = [1, 2, 5, 10]
+      .map((n, i) => `<button type="button" class="ms-amt-chip${i === 0 ? " ms-amt-on" : ""}" data-amt="${n}">${n}</button>`)
+      .join("");
+    const html = `
+      <div class="ms-sheet-head">
+        <span class="ms-sheet-title">${safe}</span>
+        <button type="button" class="ms-sheet-close" aria-label="Close">✕</button>
+      </div>
+      <div class="ms-adj-preview">
+        <span class="ms-adj-cur">${Number(value) || 0}</span>
+        ${hasMax ? `<span class="ms-adj-max">/ ${max}</span>` : ""}
+        <span class="ms-adj-delta"></span>
+      </div>
+      <div class="ms-adj-amounts">
+        <span class="ms-adj-amounts-label">${L("amount")}</span>
+        ${chips}
+      </div>
+      <div class="ms-adj-actions">
+        <button type="button" class="ms-adj-sub"><span class="ms-adj-sign">−</span>${L("subtract")}</button>
+        <button type="button" class="ms-adj-add"><span class="ms-adj-sign">+</span>${L("add")}</button>
+      </div>
+      <button type="button" class="ms-sheet-done">${L("done")}</button>`;
+
+    const mounted = this.#mountSheet(html);
+    if (!mounted) return;
+    const { wrap, close } = mounted;
+
+    const start = Number(value) || 0;
+    let cur = start;
+    let amt = 1;
+    const curEl = wrap.querySelector(".ms-adj-cur");
+    const deltaEl = wrap.querySelector(".ms-adj-delta");
+    const paint = () => {
+      curEl.textContent = String(cur);
+      const d = cur - start;
+      deltaEl.textContent = d === 0 ? "" : d > 0 ? `+${d}` : String(d);
+      deltaEl.className = "ms-adj-delta" + (d > 0 ? " ms-delta-up" : d < 0 ? " ms-delta-down" : "");
+    };
+    const apply = (sign) => {
+      let next = cur + sign * amt;
+      next = Math.max(0, hasMax ? Math.min(max, next) : next);
+      cur = next;
+      paint();
+    };
+    const commitAndClose = () => {
+      close();
+      if (cur !== start) this.#dispatch({ type: "setResource", key, value: cur });
+    };
+
+    wrap.querySelectorAll(".ms-amt-chip").forEach((b) =>
+      b.addEventListener("click", () => {
+        amt = Number(b.dataset.amt) || 1;
+        wrap.querySelectorAll(".ms-amt-chip").forEach((x) => x.classList.toggle("ms-amt-on", x === b));
+      })
+    );
+    wrap.querySelector(".ms-adj-sub").addEventListener("click", () => apply(-1));
+    wrap.querySelector(".ms-adj-add").addEventListener("click", () => apply(+1));
+    wrap.querySelector(".ms-sheet-done").addEventListener("click", commitAndClose);
+    wrap.querySelector(".ms-sheet-close").addEventListener("click", commitAndClose);
+    wrap.querySelector(".ms-sheet-backdrop").addEventListener("click", commitAndClose);
+  }
+
+  /**
+   * Open the roll bottom sheet for a stat: an Advantage / Normal / Disadvantage
+   * toggle plus an optional difficulty, then Roll. Dispatches a `rollTrait` intent
+   * carrying the gathered config; the adapter performs the real system roll without
+   * the system's own roll dialog. Advantage/difficulty are generic enough to stay
+   * shell-owned — the adapter decides how to map them. Falls back to the plain
+   * primary intent when no rollable stat is armed.
+   */
+  #openRollSheet(key, label, event) {
+    if (!key) return this.#dispatch({ type: "primary", event });
+    const L = (k) => game.i18n.localize(`MOBILE_SHEET.roll.${k}`);
+    const safe = Handlebars.escapeExpression(label || L("title"));
+    const html = `
+      <div class="ms-sheet-head">
+        <span class="ms-sheet-title">${safe}</span>
+        <button type="button" class="ms-sheet-close" aria-label="Close">✕</button>
+      </div>
+      <div class="ms-roll-adv" role="group">
+        <button type="button" class="ms-adv-opt ms-adv-dis" data-adv="disadvantage">${L("disadvantage")}</button>
+        <button type="button" class="ms-adv-opt ms-adv-on" data-adv="neutral">${L("normal")}</button>
+        <button type="button" class="ms-adv-opt ms-adv-adv" data-adv="advantage">${L("advantage")}</button>
+      </div>
+      <label class="ms-roll-diff">
+        <span class="ms-roll-diff-label">${L("difficulty")}</span>
+        <input type="number" class="ms-roll-diff-input" inputmode="numeric" min="0" step="1" placeholder="—">
+      </label>
+      <button type="button" class="ms-roll-go">${L("roll")}</button>`;
+
+    const mounted = this.#mountSheet(html);
+    if (!mounted) return;
+    const { wrap, close } = mounted;
+
+    let adv = "neutral";
+    wrap.querySelectorAll(".ms-adv-opt").forEach((b) =>
+      b.addEventListener("click", () => {
+        adv = b.dataset.adv;
+        wrap.querySelectorAll(".ms-adv-opt").forEach((x) => x.classList.toggle("ms-adv-on", x === b));
+      })
+    );
+    wrap.querySelector(".ms-sheet-close").addEventListener("click", close);
+    wrap.querySelector(".ms-sheet-backdrop").addEventListener("click", close);
+    wrap.querySelector(".ms-roll-go").addEventListener("click", (ev) => {
+      const raw = wrap.querySelector(".ms-roll-diff-input")?.value ?? "";
+      close();
+      this.#dispatch({
+        type: "rollTrait",
+        key,
+        advantage: adv,
+        difficulty: raw === "" ? null : Number(raw),
+        event: ev
+      });
+    });
   }
 
   // --- live re-render --------------------------------------------------------

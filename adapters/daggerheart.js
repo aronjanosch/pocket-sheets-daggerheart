@@ -437,6 +437,31 @@ function openRest(actor, key) {
   return new Downtime(actor, key === "short").render({ force: true });
 }
 
+/** Map a shell advantage choice to the system's advantageState value (adv +1 / dis −1). */
+function advantageValue(choice) {
+  const state = CONFIG?.DH?.ACTIONS?.advantageState;
+  if (choice === "advantage") return state?.advantage?.value ?? 1;
+  if (choice === "disadvantage") return state?.disadvantage?.value ?? -1;
+  return undefined; // neutral → let the system roll straight
+}
+
+/**
+ * Roll a trait with our own config, skipping the system's roll dialog.
+ * `dialog.configure:false` is the documented off-switch in DHRoll.buildConfigure
+ * (2.x); the system still builds the Roll and posts the chat card — we never fake
+ * dice. Falls back to the normal dialog roll when no config is supplied.
+ */
+function rollTraitDirect(actor, intent) {
+  if (typeof actor.rollTrait !== "function") return;
+  const roll = { trait: intent.key, type: "trait" };
+  const adv = advantageValue(intent.advantage);
+  if (adv != null) roll.advantage = adv;
+  if (intent.difficulty != null && !Number.isNaN(Number(intent.difficulty))) {
+    roll.difficulty = Number(intent.difficulty);
+  }
+  return actor.rollTrait(intent.key, { dialog: { configure: false }, roll, event: intent.event });
+}
+
 /** Open the system's Death Move dialog (when all HP are marked). */
 function openDeathMove(actor) {
   const DeathMove = game.system?.api?.applications?.dialogs?.DeathMove;
@@ -533,8 +558,11 @@ export const daggerheartAdapter = {
   /** Delegate each intent to the system's own method. Unknown intent → no-op. */
   async invoke(actor, intent) {
     switch (intent.type) {
+      case "rollTrait":
+        return rollTraitDirect(actor, intent);
       case "primary":
       case "rollStat":
+        // Fallback path (no roll-sheet config) → the system's own roll dialog.
         return actor.rollTrait?.(intent.statKey ?? intent.key, { event: intent.event });
       case "useItem":
         return useItem(actor, intent);

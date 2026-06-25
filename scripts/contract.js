@@ -47,13 +47,15 @@
 
 /**
  * @typedef {object} Intent
- * @property {"rollStat"|"useItem"|"openItem"|"adjustResource"|"setResource"|"toggleTag"|"toggleItem"|"toChat"|"expChat"|"equip"|"vault"|"rest"|"deathMove"|"primary"} type
- * @property {string} [key]     Stat key (rollStat), resource key (adjustResource/setResource), tag key (toggleTag), experience id (expChat), or button key (rest: "short"/"long").
+ * @property {"rollStat"|"rollTrait"|"useItem"|"openItem"|"adjustResource"|"setResource"|"toggleTag"|"toggleItem"|"toChat"|"expChat"|"equip"|"vault"|"rest"|"deathMove"|"primary"} type
+ * @property {string} [key]     Stat key (rollStat/rollTrait), resource key (adjustResource/setResource), tag key (toggleTag), experience id (expChat), or button key (rest: "short"/"long").
  * @property {string} [itemId]  Item id (useItem / openItem / toggleItem / toChat / equip / vault).
  * @property {string} [uuid]    Sub-document uuid (useItem on an item's individual action).
  * @property {number} [delta]   Resource step (adjustResource), e.g. +1 / -1.
  * @property {number} [value]   Absolute resource value (setResource) from slide-to-set.
  * @property {string} [statKey] Active stat key the shell passes with a `primary` action.
+ * @property {"advantage"|"neutral"|"disadvantage"} [advantage] Roll-sheet advantage choice (rollTrait).
+ * @property {number} [difficulty]              Optional roll difficulty from the roll sheet (rollTrait).
  * @property {Event}  [event]   Forwarded DOM event for modifier-key / dialog behavior.
  */
 
