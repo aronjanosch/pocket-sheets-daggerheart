@@ -294,7 +294,6 @@
 
 .ms-resource-max { color: var(--ms-muted); font-weight: 400; }
 
-.ms-resource-die,
 .ms-resource-temp {
   margin-left: auto;
   font: 700 8px var(--ms-mono);
@@ -303,9 +302,7 @@
   border-radius: 6px;
 }
 
-.ms-resource-die { color: var(--ms-muted); background: var(--ms-surf2); border: 1px solid var(--ms-line2); }
 .ms-resource-temp { color: #86b48f; background: #86b48f1f; border: 1px solid #86b48f44; }
-.ms-resource-die + .ms-resource-temp { margin-left: 6px; }
 
 .ms-bar {
   margin-top: 9px;
@@ -351,18 +348,6 @@
 .ms-pips-diamond .ms-pip { border-radius: 3px; transform: rotate(45deg); }
 .ms-pips-diamond .ms-pip-on { box-shadow: 0 0 9px var(--tone), inset 0 1px 0 #ffffff66; }
 
-.ms-tracks { display: flex; flex-direction: column; gap: 9px; margin-top: 10px; }
-.ms-track { display: flex; align-items: center; gap: 10px; }
-.ms-track-label {
-  font: 700 9px var(--ms-sans);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ms-muted);
-  min-width: 38px;
-}
-.ms-pips-mini { margin-top: 0; gap: 5px; }
-.ms-pips-mini .ms-pip { width: 11px; height: 11px; border-radius: 2px; }
-
 /* --- slide-to-set sliders ------------------------------------------------- */
 
 .ms-resource-hint {
@@ -372,7 +357,6 @@
   text-transform: uppercase;
   color: var(--ms-muted);
 }
-.ms-resource-die + .ms-resource-hint,
 .ms-resource-temp + .ms-resource-hint { margin-left: 8px; }
 
 .ms-slider {
@@ -513,20 +497,6 @@
   font: 500 10px var(--ms-mono);
   color: var(--ms-muted);
 }
-
-.ms-stat-rank {
-  margin-top: 4px;
-  font: 700 7px var(--ms-sans);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border-radius: 5px;
-  padding: 1px 6px;
-}
-
-.ms-rank-t { color: #8fa6bf; background: #8fa6bf1f; border: 1px solid #8fa6bf55; }
-.ms-rank-e { color: var(--ms-accent); background: color-mix(in oklab, var(--ms-accent) 14%, transparent); border: 1px solid color-mix(in oklab, var(--ms-accent) 40%, transparent); }
-.ms-rank-m { color: #cf8f5e; background: #cf8f5e1f; border: 1px solid #cf8f5e55; }
-.ms-rank-l { color: #e8c46d; background: #e8c46d1f; border: 1px solid #e8c46d55; }
 
 .ms-stat-dot {
   position: absolute;

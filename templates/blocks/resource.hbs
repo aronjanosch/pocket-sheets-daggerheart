@@ -1,10 +1,9 @@
-{{!-- ResourceBlock: slide-to-set bar / pips / diamonds, or read-only tracks.
+{{!-- ResourceBlock: slide-to-set bar / pips / diamonds.
       Drag the track with a finger to set the value (commits on release → setResource). --}}
 <section class="ms-block ms-resource {{toneClass}}" data-key="{{key}}">
   <div class="ms-resource-head">
     <span class="ms-resource-label">{{label}}</span>
     <span class="ms-resource-value"><span class="ms-rv-cur">{{value}}</span>{{#if hasMax}}<span class="ms-resource-max">/{{max}}</span>{{/if}}</span>
-    {{#if hasDie}}<span class="ms-resource-die">{{die}}</span>{{/if}}
     {{#if hasTemp}}<span class="ms-resource-temp">{{temp}}</span>{{/if}}
     {{#if slidable}}<span class="ms-resource-hint">slide to set</span>{{/if}}
   </div>
@@ -34,18 +33,5 @@
         {{#each pips}}<span class="ms-pip{{#if this.filled}} ms-pip-on{{/if}}"></span>{{/each}}
       </div>
     {{/if}}
-  {{/if}}
-
-  {{#if isTracks}}
-    <div class="ms-tracks">
-      {{#each tracks}}
-        <div class="ms-track">
-          <span class="ms-track-label">{{this.label}}</span>
-          <div class="ms-pips ms-pips-mini">
-            {{#each this.pips}}<span class="ms-pip{{#if this.filled}} ms-pip-on{{/if}}"></span>{{/each}}
-          </div>
-        </div>
-      {{/each}}
-    </div>
   {{/if}}
 </section>

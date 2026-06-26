@@ -47,24 +47,23 @@ Many users are still on v13 while others (incl. the maintainer) run v14. Both ar
 - **Actor selector** for players who own multiple actors (default to assigned character).
 - *Candidate to split into its own milestone or defer to v2 depending on effort.*
 
-### Phase 4 — Second adapter: dnd5e
-- Proves the abstraction generalizes across two very different systems.
-- Hardens the adapter contract based on lessons from two implementations.
+### Phase 5 — Mobile polish (Daggerheart design parity)
+- Item-detail bottom sheet, free dice roller, tappable thresholds, features-tab
+  polish, roll-result banner. See [specs/phase-5-mobile-polish.md](specs/phase-5-mobile-polish.md).
+- Accessibility, theming, error states, empty/edge cases; package + listing.
 
-### Phase 5 — Polish & release
-- Accessibility, theming, error states, empty/edge cases.
-- Docs: "how to write an adapter" so the community can add pf2e and others.
-- Package, manifest, listing.
+> **Focus:** Daggerheart-first. A second adapter (dnd5e, pf2e, …) is a later bet, not a
+> near-term goal — but the contract stays the seam that makes it a drop-in when it comes.
 
 ---
 
 ## Open extension model
 
 ```
-core shell  →  adapter contract  →  adapters/{daggerheart, dnd5e, ...}
+core shell  →  adapter contract  →  adapters/{daggerheart, ...}
 ```
 
-Adding a system = one new adapter file + registration. No core changes. This is what MIT + open source is meant to unlock.
+Adding a system = one new adapter file + registration. No core changes. This is what MIT + open source is meant to unlock — even though Daggerheart is the only adapter we maintain today.
 
 ---
 

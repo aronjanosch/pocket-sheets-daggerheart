@@ -211,17 +211,9 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       slidable: b.editable !== false && hasMax,
       temp: b.temp != null ? `+${b.temp} TEMP` : "",
       hasTemp: b.temp != null,
-      die: b.die ?? "",
-      hasDie: !!b.die,
-      isBar: false, isPips: false, isTracks: false
+      isBar: false, isPips: false
     };
-    if (display === "tracks") {
-      out.isTracks = true;
-      out.tracks = (b.tracks ?? []).map((t) => ({
-        label: t.label,
-        pips: this.#pips(t.value, t.max)
-      }));
-    } else if ((display === "pips" || display === "diamond") && hasMax) {
+    if ((display === "pips" || display === "diamond") && hasMax) {
       out.isPips = true;
       out.diamond = display === "diamond";
       out.small = b.max > 8;
@@ -240,12 +232,10 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   #statGrid(b) {
-    const RANK = { T: ["Trained", "ms-rank-t"], E: ["Expert", "ms-rank-e"], M: ["Master", "ms-rank-m"], L: ["Legendary", "ms-rank-l"] };
     return {
       kind: "statGrid",
       cols: b.cols || 3,
       stats: (b.stats ?? []).map((s) => {
-        const r = s.rank ? RANK[s.rank] : null;
         const actionName = s.select ? "selectStat" : s.rollable ? "rollStat" : "";
         return {
           key: s.key,
@@ -253,9 +243,6 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           value: String(s.value),
           sub: s.sub != null ? String(s.sub) : "",
           hasSub: s.sub != null,
-          rankName: r ? r[0] : "",
-          rankClass: r ? r[1] : "",
-          hasRank: !!r,
           save: !!s.save,
           spellcast: !!s.spellcast,
           active: !!s.select && s.key === this.#activeStatKey,

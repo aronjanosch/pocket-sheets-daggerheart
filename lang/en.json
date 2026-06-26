@@ -28,9 +28,6 @@
   "MOBILE_SHEET.roll.difficulty": "Difficulty",
   "MOBILE_SHEET.roll.roll": "Roll",
 
-  "MOBILE_SHEET.settings.devStub.name": "Developer: stub adapter",
-  "MOBILE_SHEET.settings.devStub.hint": "Register a dummy adapter that renders one of each block kind, for testing the shell without a real system adapter. Reload after changing.",
-
   "MOBILE_SHEET.settings.activation.name": "Activation",
   "MOBILE_SHEET.settings.activation.hint": "When to auto-open the mobile sheet on this device. Reload after changing.",
   "MOBILE_SHEET.settings.activation.auto": "Auto (open on phones/tablets)",

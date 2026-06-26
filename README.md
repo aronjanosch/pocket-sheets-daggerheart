@@ -18,20 +18,23 @@ Then enable **Pocket Sheet** in your world's module settings.
 
 ## Status
 
-Early development. Foundry compatibility: **minimum v13, verified v14.**
+Early development, **Daggerheart-first**. Foundry compatibility: **minimum v13, verified v14.**
 
 | Phase | What | State |
 |------|------|-------|
 | 0 | Foundations: skeleton, adapter contract, registry | ✅ done |
-| 1 | Core shell: the system-agnostic mobile sheet | planned |
-| 2 | First adapter: Daggerheart | spec'd |
-| 3 | Activation & actor selection | planned |
-| 4 | Second adapter: dnd5e | planned |
+| 1 | Core shell: the system-agnostic mobile sheet | ✅ done |
+| 2 | Daggerheart adapter | ✅ done |
+| 3 | Activation & actor selection | ✅ done |
+| 5 | Mobile polish: item detail, dice roller, roll banner | spec'd |
+
+The adapter contract stays the extension point — other systems can be added later
+(by us or contributors) without touching the shell. Daggerheart is the focus today.
 
 ## How it works
 
 ```
-core shell  →  adapter contract  →  adapters/{daggerheart, dnd5e, ...}
+core shell  →  adapter contract  →  adapters/{daggerheart, ...}
 ```
 
 - The **shell** is one registered `ActorSheetV2`. It contains zero system knowledge. It renders a normalized, block-based view model and turns taps into abstract *intents*.

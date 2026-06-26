@@ -16,7 +16,6 @@ import { MODULE_ID } from "./constants.js";
 import { register, resolve } from "./registry.js";
 import { PocketSheet, registerPocketSheet } from "./sheet.js";
 import { registerActivationSettings, activateLauncher, applyMobileCanvasMode } from "./launcher.js";
-import { stubAdapter } from "./stub-adapter.js";
 import { daggerheartAdapter } from "../adapters/daggerheart.js";
 
 export { MODULE_ID };
@@ -47,16 +46,6 @@ Hooks.once("init", () => {
     `modules/${MODULE_ID}/templates/blocks/scale.hbs`
   ]);
 
-  // Dev-only: a flag to register the stub adapter for shell testing (Phase 1 §8).
-  game.settings.register(MODULE_ID, "devStub", {
-    name: "MOBILE_SHEET.settings.devStub.name",
-    hint: "MOBILE_SHEET.settings.devStub.hint",
-    scope: "client",
-    config: true,
-    type: Boolean,
-    default: false
-  });
-
   // Activation layer: when/where to auto-present the sheet (Phase 3).
   registerActivationSettings();
 
@@ -77,13 +66,6 @@ Hooks.once("setup", () => {
 });
 
 Hooks.once("ready", () => {
-  // Dev stub: register last (overrides) and bind to the active system so resolve finds it.
-  if (game.settings.get(MODULE_ID, "devStub")) {
-    stubAdapter.systemId = game.system.id;
-    register(stubAdapter);
-    console.warn(`${MODULE_ID} | dev stub adapter active for system "${game.system.id}"`);
-  }
-
   registerPocketSheet();
 
   // Phase 3: install the launcher and auto-open on mobile.

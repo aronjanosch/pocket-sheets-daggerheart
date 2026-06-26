@@ -124,18 +124,11 @@
  * @property {ResourceTone} [tone]        Shell-owned role color. Default "accent".
  * @property {number} value
  * @property {number|null} max            null -> maxless stepper, no bar/pips.
- * @property {"bar"|"pips"|"diamond"|"tracks"} [display] Default "bar".
+ * @property {"bar"|"pips"|"diamond"} [display] Default "bar".
  * @property {number} [temp]              Temp HP -> "+N TEMP" badge.
- * @property {string} [die]               e.g. "d10" badge (5e hit dice).
- * @property {ResourceTrack[]} [tracks]   For display:"tracks" (spell slots).
  * @property {boolean} [editable]         Show the +/- stepper. Default true.
  *
  * @typedef {"hp"|"stress"|"armor"|"accent"|"info"} ResourceTone
- *
- * @typedef {object} ResourceTrack
- * @property {string} label
- * @property {number} value
- * @property {number} max
  */
 
 /**
@@ -151,7 +144,6 @@
  * @property {string} label       Display-ready.
  * @property {number|string} value
  * @property {number|string} [sub] Secondary value, e.g. ability score under the modifier.
- * @property {"T"|"E"|"M"|"L"} [rank] Proficiency rank (PF2: Trained/Expert/Master/Legendary).
  * @property {boolean} [save]     Show a save dot.
  * @property {boolean} [rollable] Tap -> rollStat.
  * @property {boolean} [select]   Tap -> arm the primary action (shell-local active state).
