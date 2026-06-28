@@ -260,7 +260,7 @@
  */
 
 /**
- * @typedef {ResourceBlock|ItemResourceBlock|StatGridBlock|TagsBlock|ActionListBlock|InfoBlock|HeadingBlock|ButtonsBlock|ScaleBlock} Block
+ * @typedef {ResourceBlock|StatGridBlock|TagsBlock|ActionListBlock|InfoBlock|HeadingBlock|ButtonsBlock|ScaleBlock} Block
  */
 
 /**
@@ -281,12 +281,11 @@
 
 /**
  * An item-owned resource (Daggerheart Seraph Prayer Dice, an escalating die, a class
- * counter). The shell renders it on its own and fires itemId-scoped intents; all three
- * variants live in one block so adapters surface them uniformly.
- * @typedef {object} ItemResourceBlock
- * @property {"itemResource"} kind
+ * counter), embedded on its item's ActionItem row via `ActionItem.resource` so it lives
+ * on the card it belongs to. The shell fires itemId-scoped intents; all three variants
+ * share one shape so adapters surface them uniformly.
+ * @typedef {object} ItemResource
  * @property {string} itemId              Owning item id; forwarded in every intent.
- * @property {string} label               Display-ready (usually the item name).
  * @property {"dice"|"die"|"count"} variant
  *   - `dice` : a pool of dice (`dice[]`); tap one → toggleResourceDie, reroll → rollResourceDice.
  *   - `die`  : a single escalating die; the ± stepper fires adjustItemResource.
@@ -356,6 +355,7 @@
  * @property {boolean} [use]     Whether tapping the row uses the item (-> useItem). Default true.
  * @property {SubAction[]} [actions] Inline buttons for an item's own actions (Daggerheart: "Mark a Stress", etc).
  * @property {Control[]} [controls]  Small control icons (equip / vault / post-to-chat).
+ * @property {ItemResource} [resource] An item-owned resource (Prayer Dice, class counter) rendered on this card.
  *
  * A button for one of an item's embedded actions. Tapping uses that action,
  * which the system resolves (spending its cost — mark stress, spend hope…).

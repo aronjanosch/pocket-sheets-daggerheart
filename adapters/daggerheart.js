@@ -86,14 +86,15 @@ function dieFacesImg(faces) {
 }
 
 /**
- * One owned item's `system.resource` → a normalized itemResource block, or null when the
- * item carries no resource. Three system shapes (CONFIG.DH.ITEM.itemResourceTypes):
+ * One owned item's `system.resource` → the resource descriptor embedded on that item's
+ * row (so a Seraph's Prayer Dice live on the Prayer Dice card, not a detached list), or
+ * null when the item carries no resource. Three system shapes (itemResourceTypes):
  *   - diceValue: a pool of dice (Seraph Prayer Dice) — each die has a rolled value and a
  *                spent flag; the player rerolls the pool and taps a die to spend it.
  *   - die      : a single escalating die (value 0…faces) advanced with the stepper.
  *   - simple   : a plain counter (value 0…max), `max` a formula resolved per actor/item.
  */
-function itemResourceBlock(actor, item) {
+function itemResourceFor(actor, item) {
   const res = item?.system?.resource;
   if (!res || !res.type) return null;
 
@@ -105,29 +106,21 @@ function itemResourceBlock(actor, item) {
       const s = states[i] ?? states[String(i)];
       dice.push({ index: i, value: s?.value ?? null, used: !!s?.used });
     }
-    return { kind: "itemResource", variant: "dice", itemId: item.id, label: item.name, tone: "accent", img: dieFacesImg(res.dieFaces), dice };
+    return { variant: "dice", itemId: item.id, img: dieFacesImg(res.dieFaces), dice };
   }
 
   if (res.type === "die") {
-    return {
-      kind: "itemResource", variant: "die", itemId: item.id, label: item.name, tone: "accent",
-      img: dieFacesImg(res.dieFaces), value: res.value ?? 0, max: dieFacesMax(res.dieFaces)
-    };
+    return { variant: "die", itemId: item.id, img: dieFacesImg(res.dieFaces), value: res.value ?? 0, max: dieFacesMax(res.dieFaces) };
   }
 
-  return {
-    kind: "itemResource", variant: "count", itemId: item.id, label: item.name, tone: "accent",
-    value: res.value ?? 0, max: parseItemFormula(res.max, actor, item)
-  };
+  return { variant: "count", itemId: item.id, value: res.value ?? 0, max: parseItemFormula(res.max, actor, item) };
 }
 
-/** Every owned item that tracks a resource (Seraph Prayer Dice, class counters, …),
- *  surfaced on Vitals so they're visible and rollable like the default/sleek sheets. */
-function itemResourceBlocks(actor) {
-  return (actor.items ?? [])
-    .filter((i) => i.system?.resource?.type)
-    .map((i) => itemResourceBlock(actor, i))
-    .filter(Boolean);
+/** Attach an item's own resource (Prayer Dice, class counter) to its row, when present. */
+function attachResource(row, item) {
+  const res = itemResourceFor(item.actor ?? item.parent, item);
+  if (res) row.resource = res;
+  return row;
 }
 
 /** Reroll a dice-pool resource: roll `count d<faces>`, post the dice to chat, and write
@@ -307,6 +300,7 @@ function domainCardRow(item) {
   const recall = num(item.system?.recallCost ?? item.system?.recall);
   if (typeof recall === "number" && recall > 0) { row.cost = `↺${recall}`; row.costMuted = true; }
   attachActions(row, item);
+  attachResource(row, item);
   row.controls = [{ kind: "vault", active: !!item.system?.inVault }, ...chatControl(item)];
   return row;
 }
@@ -372,6 +366,7 @@ function featureRow(item) {
   // an active feature's own actions stay reachable as inline action buttons + in the panel.
   const row = { itemId: item.id, name: item.name, img: item.img, use: false };
   attachActions(row, item);
+  attachResource(row, item);
   const controls = chatControl(item);
   if (controls.length) row.controls = controls;
   return row;
@@ -1509,11 +1504,6 @@ export const daggerheartAdapter = {
       actor.system?.armorScore?.max > 0 ? resourceBlock(actor, "armor", L("resource.armor"), "armor", "pips") : null,
       ...extraResourceBlocks(actor)
     ].filter(Boolean);
-
-    // Item-level resources (Seraph Prayer Dice, class counters): their own section so
-    // they're seen and rolled here, not just on the desktop sheet.
-    const itemRes = itemResourceBlocks(actor);
-    if (itemRes.length) vitals.push({ kind: "heading", label: L("heading.resources") }, ...itemRes);
 
     vitals.push({ kind: "heading", label: L("heading.traits") }, traitsGrid(actor));
     const rest = restButtons();

@@ -367,11 +367,24 @@
 }
 .ms-itemres-roll:active { background: color-mix(in oklab, var(--tone) 24%, transparent); }
 
+/* Embedded on a card row: a full-width sub-row beneath the item's name line. */
+.ms-action-res {
+  --tone: var(--ms-accent);
+  flex-basis: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+  margin-top: 2px;
+  border-top: 1px solid var(--ms-line2);
+}
+
 .ms-itemres-dice {
   display: flex;
   flex-wrap: wrap;
   gap: 9px;
-  margin-top: 11px;
+  flex: 1 1 auto;
 }
 
 .ms-itemres-die {
@@ -419,16 +432,17 @@
   color: var(--ms-stress);
 }
 
-.ms-itemres-stepper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 11px;
+.ms-itemres-val {
+  min-width: 2.5em;
+  text-align: center;
+  font: 700 15px var(--ms-mono);
+  color: var(--ms-fg);
 }
+
 .ms-itemres-die-single {
   position: static;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   margin-right: auto;
 }
 

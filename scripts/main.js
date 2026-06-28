@@ -37,7 +37,6 @@ Hooks.once("init", () => {
   // Pre-register block partials so the template's dynamic `{{> path}}` resolves.
   foundry.applications.handlebars.loadTemplates([
     `modules/${MODULE_ID}/templates/blocks/resource.hbs`,
-    `modules/${MODULE_ID}/templates/blocks/itemResource.hbs`,
     `modules/${MODULE_ID}/templates/blocks/statGrid.hbs`,
     `modules/${MODULE_ID}/templates/blocks/tags.hbs`,
     `modules/${MODULE_ID}/templates/blocks/actionList.hbs`,

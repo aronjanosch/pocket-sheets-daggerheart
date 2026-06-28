@@ -19,7 +19,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
 /** Block kinds the shell knows how to render → their partial file names. */
-const KNOWN_KINDS = new Set(["resource", "itemResource", "statGrid", "tags", "actionList", "info", "heading", "buttons", "scale"]);
+const KNOWN_KINDS = new Set(["resource", "statGrid", "tags", "actionList", "info", "heading", "buttons", "scale"]);
 
 /** Resource tones map to a shell-owned role color class (theming stays in shell). */
 const TONE_CLASS = {
@@ -443,7 +443,6 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const partial = `modules/${MODULE_ID}/templates/blocks/${b.kind}.hbs`;
     switch (b.kind) {
       case "resource": return { ...this.#resource(b), partial };
-      case "itemResource": return { ...this.#itemResource(b), partial };
       case "statGrid": return { ...this.#statGrid(b), partial };
       case "tags": return { ...this.#tags(b), partial };
       case "actionList": return { ...this.#actionList(b), partial };
@@ -492,17 +491,15 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /**
-   * An item-owned resource (Daggerheart's Seraph Prayer Dice, escalating dice, class
-   * counters). Three variants: a dice pool (tap a die to spend it, a button to reroll the
-   * pool), an escalating single die, or a plain counter — the latter two a ± stepper.
-   * Generic: the shell reads only the normalized shape and fires itemId-scoped intents.
+   * An item-owned resource embedded on its own card row (Daggerheart's Seraph Prayer Dice,
+   * escalating dice, class counters). Three variants: a dice pool (tap a die to spend it, a
+   * button to reroll the pool), an escalating single die, or a plain counter — the latter
+   * two a ± stepper. Generic: reads only the normalized shape, fires itemId-scoped intents.
    */
   #itemResource(b) {
     const toneClass = TONE_CLASS[b.tone] ?? TONE_CLASS.accent;
     const out = {
-      kind: "itemResource",
       itemId: b.itemId,
-      label: b.label,
       toneClass,
       isDice: b.variant === "dice",
       img: b.img,
@@ -608,7 +605,10 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           controls,
           hasControls: controls.length > 0,
           actions,
-          hasActions: actions.length > 0
+          hasActions: actions.length > 0,
+          // An item's own resource (Prayer Dice, class counter) embedded on its card.
+          resource: i.resource ? this.#itemResource(i.resource) : null,
+          hasResource: !!i.resource
         };
       })
     };
