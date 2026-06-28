@@ -94,7 +94,11 @@ function traitsGrid(actor) {
 
 /**
  * Damage thresholds as a compact scale below HP: the Minor / Major / Severe zones
- * (1 / 2 / 3 HP marked) split by the Major and Severe boundary values.
+ * split by the Major and Severe boundary values. Each zone is tappable — it marks
+ * the HP that incoming damage in that band costs (Minor 1 / Major 2 / Severe 3).
+ * `resource: "hitPoints"` + per-segment `mark` tell the shell to fire an
+ * adjustResource intent; the adapter's invoke clamps and writes (HP `value` is the
+ * marked count, so marking damage is a positive delta).
  */
 function thresholdsScale(actor) {
   const t = actor.system?.damageThresholds;
@@ -102,13 +106,15 @@ function thresholdsScale(actor) {
   const major = num(t.major);
   const severe = num(t.severe);
   if (major == null && severe == null) return null;
+  const markSub = (n) => game.i18n.format("MOBILE_SHEET.daggerheart.threshold.mark", { n });
   return {
     kind: "scale",
     label: L("heading.thresholds"),
+    resource: "hitPoints",
     segments: [
-      { label: L("threshold.minor") },
-      { label: L("threshold.major") },
-      { label: L("threshold.severe") }
+      { label: L("threshold.minor"), sub: markSub(1), mark: 1 },
+      { label: L("threshold.major"), sub: markSub(2), mark: 2 },
+      { label: L("threshold.severe"), sub: markSub(3), mark: 3 }
     ],
     bounds: [{ value: major ?? 0 }, { value: severe ?? 0 }]
   };
@@ -462,6 +468,19 @@ function rollTraitDirect(actor, intent) {
   return actor.rollTrait(intent.key, { dialog: { configure: false }, roll, event: intent.event });
 }
 
+/**
+ * Generic dice pool → a plain Foundry roll posted to chat. Not a Daggerheart
+ * mechanic (no duality / traits) — just the core dice roller the shell's dice
+ * tray opens. Returns the evaluated Roll so the shell can echo the result inline
+ * (the chat log is hidden in phone sheet-only mode).
+ */
+async function rollDice(actor, formula) {
+  if (!formula || typeof formula !== "string") return;
+  const roll = await new Roll(formula).evaluate();
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }) });
+  return roll;
+}
+
 /** Open the system's Death Move dialog (when all HP are marked). */
 function openDeathMove(actor) {
   const DeathMove = game.system?.api?.applications?.dialogs?.DeathMove;
@@ -723,6 +742,8 @@ export const daggerheartAdapter = {
       case "rollStat":
         // Fallback path (no roll-sheet config) → the system's own roll dialog.
         return actor.rollTrait?.(intent.statKey ?? intent.key, { event: intent.event });
+      case "rollDice":
+        return rollDice(actor, intent.formula);
       case "useItem":
         return useItem(actor, intent);
       case "openItem":

@@ -28,6 +28,12 @@
   "MOBILE_SHEET.roll.difficulty": "Difficulty",
   "MOBILE_SHEET.roll.roll": "Roll",
 
+  "MOBILE_SHEET.dice.title": "Roll Dice",
+  "MOBILE_SHEET.dice.hint": "Tap a die to add it to the pool. Long-press or right-click to remove one.",
+  "MOBILE_SHEET.dice.empty": "Tap dice to build your roll",
+  "MOBILE_SHEET.dice.modifier": "Modifier",
+  "MOBILE_SHEET.dice.roll": "Roll",
+
   "MOBILE_SHEET.settings.activation.name": "Activation",
   "MOBILE_SHEET.settings.activation.hint": "When to auto-open the mobile sheet on this device. Reload after changing.",
   "MOBILE_SHEET.settings.activation.auto": "Auto (open on phones/tablets)",
@@ -79,6 +85,7 @@
   "MOBILE_SHEET.daggerheart.threshold.minor": "Minor",
   "MOBILE_SHEET.daggerheart.threshold.major": "Major",
   "MOBILE_SHEET.daggerheart.threshold.severe": "Severe",
+  "MOBILE_SHEET.daggerheart.threshold.mark": "Mark {n}",
 
   "MOBILE_SHEET.daggerheart.rest.short": "Short Rest",
   "MOBILE_SHEET.daggerheart.rest.long": "Long Rest",

@@ -128,6 +128,36 @@ export async function applyMobileCanvasMode() {
   }
 }
 
+// --- Dice So Nice compatibility (canvas-off) --------------------------------
+
+/**
+ * With `core.noCanvas` on, Dice So Nice bails at startup and never creates
+ * `game.dice3d` — but the module still reports `active`. Daggerheart's duality
+ * roll guards its 3D presets on `module.active` (not on `game.dice3d`), so it
+ * then dereferences `game.dice3d.DiceFactory` and throws, breaking EVERY trait /
+ * duality roll on a phone. We can't patch the system, so we install a tiny no-op
+ * `game.dice3d` that satisfies the surface the roll pipeline touches and produces
+ * no 3D dice (there's no canvas to draw them on anyway). Scoped tightly: only
+ * when the canvas is off, DSN is active, and nothing else has set `game.dice3d`.
+ */
+export function installDiceShim() {
+  if (!game.settings.settings.has("core.noCanvas")) return;
+  if (!game.settings.get("core", "noCanvas")) return;        // canvas on → DSN works normally
+  if (!game.modules.get("dice-so-nice")?.active) return;     // DSN inactive → system guards itself
+  if (game.dice3d) return;                                   // already initialized → leave it
+
+  const die = { appearance: {}, modelFile: null, modelLoaded: true, loadTextures: async () => {}, loadModel: async () => {} };
+  const diceSystem = { name: "", dice: { get: () => die } };
+  const noop = async () => true;
+  game.dice3d = {
+    DiceFactory: { loaderGLTF: null, systems: { get: () => diceSystem } },
+    showForRoll: noop,
+    waitFor3DAnimationByMessageID: noop,
+    show: noop
+  };
+  console.log(`${MODULE_ID} | canvas off — installed no-op game.dice3d shim so duality rolls don't require 3D dice`);
+}
+
 // --- actor resolution ------------------------------------------------------
 
 /** Owned actors of a type the active adapter supports (all types if no adapter). */
@@ -265,6 +295,7 @@ export function applyMobileChrome() {
  * Call after registerPocketSheet() so the sheet class is registered.
  */
 export function activateLauncher() {
+  installDiceShim();
   applyMobileChrome();
   // In fullscreen sheet-only mode the sheet can't be closed and carries its own
   // character switcher (tap the portrait), so the FAB is redundant — skip it.

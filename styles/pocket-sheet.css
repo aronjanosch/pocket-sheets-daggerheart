@@ -808,6 +808,33 @@
   background: color-mix(in oklab, var(--ms-accent) 12%, transparent);
 }
 
+/* tappable damage-threshold zone: tap to mark HP */
+.ms-scale-seg-tap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--ms-tap-min);
+  padding: 4px 2px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+}
+.ms-scale-seg-tap:active {
+  background: #bb514224;
+  border-color: var(--ms-hp, #bb5142);
+  transform: scale(0.96);
+}
+.ms-scale-seg-label { font: 600 11px var(--ms-sans); color: var(--ms-soft); }
+.ms-scale-seg-sub {
+  font: 700 8px var(--ms-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ms-muted);
+}
+
 /* spellcasting trait marker on a stat tile */
 .ms-stat { position: relative; }
 .ms-stat-wand {
@@ -830,17 +857,20 @@
 
 .ms-tray {
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
   background: linear-gradient(180deg, transparent 0%, var(--ms-bg) 45%);
 }
 
 .ms-primary {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  width: 100%;
   min-height: 56px;
   border-radius: 16px;
   border: 1px solid #ffffff2e;
@@ -855,6 +885,23 @@
 
 .ms-primary-label { font: 700 18px var(--ms-serif); letter-spacing: 0.04em; }
 .ms-primary-sub { font: 600 10px var(--ms-mono); opacity: 0.8; }
+
+.ms-dice-btn {
+  flex: 0 0 auto;
+  width: 56px;
+  min-height: 56px;
+  border-radius: 16px;
+  border: 1px solid var(--ms-line2);
+  background: var(--ms-surf2);
+  color: var(--ms-soft);
+  font-size: 24px;
+  cursor: pointer;
+}
+.ms-dice-btn:active {
+  transform: translateY(2px) scale(0.97);
+  border-color: var(--ms-accent);
+  color: var(--ms-accent);
+}
 
 /* --- non-ok states -------------------------------------------------------- */
 
@@ -1149,6 +1196,108 @@ body.pocket-sheet-only .ms-fab {
   box-shadow: 0 8px 22px -10px color-mix(in oklab, var(--ms-accent) 60%, transparent);
 }
 .ms-roll-go:active { transform: translateY(2px) scale(0.99); }
+.ms-roll-go:disabled { opacity: 0.45; cursor: default; transform: none; box-shadow: none; }
+
+/* dice roller sheet */
+.ms-dice-hint { margin: 6px 0 14px; font: 500 11px var(--ms-sans); color: var(--ms-muted); }
+.ms-dice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+}
+.ms-die {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+  border-radius: 13px;
+  border: 1px solid var(--ms-line2);
+  background: var(--ms-surf2);
+  color: var(--ms-soft);
+  font: 700 18px var(--ms-mono);
+  cursor: pointer;
+}
+.ms-die:active { transform: scale(0.96); }
+.ms-die.ms-die-on {
+  border-color: var(--ms-accent);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--ms-accent) 13%, transparent), color-mix(in oklab, var(--ms-accent) 3%, transparent));
+  color: var(--ms-fg);
+}
+.ms-die-count {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 11px;
+  background: linear-gradient(150deg, #e8c46d, var(--ms-accent-deep));
+  color: #1a1305;
+  border: 1px solid #f0d996;
+  font: 700 12px var(--ms-mono);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px #0007;
+}
+.ms-die-on .ms-die-count { display: flex; }
+.ms-dice-pool {
+  margin-top: 14px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--ms-line);
+  background: #00000033;
+  font: 600 14px var(--ms-mono);
+  color: var(--ms-fg);
+}
+.ms-dice-pool-empty { color: var(--ms-muted); }
+.ms-dice-mod {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: 11px;
+}
+.ms-dice-mod-label {
+  flex: 1;
+  font: 600 9px var(--ms-sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ms-muted);
+}
+.ms-dice-mod-btn {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  background: var(--ms-surf2);
+  border: 1px solid var(--ms-line2);
+  color: var(--ms-fg);
+  font: 700 20px var(--ms-mono);
+  cursor: pointer;
+}
+.ms-dice-mod-btn:active { transform: scale(0.95); border-color: var(--ms-accent); }
+.ms-dice-mod-val { min-width: 46px; text-align: center; font: 700 20px var(--ms-mono); color: var(--ms-fg); }
+.ms-dice-result {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border-radius: 14px;
+  border: 1px solid var(--ms-line2);
+  background: linear-gradient(180deg, var(--ms-raise), var(--ms-surf));
+  animation: ms-sheet-in 0.28s ease;
+}
+.ms-dice-rbreak { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.ms-dice-rgroup { display: flex; align-items: baseline; gap: 10px; }
+.ms-dice-rlabel { flex: 0 0 auto; min-width: 36px; font: 700 11px var(--ms-mono); color: var(--ms-accent); }
+.ms-dice-rvals { font: 600 13px var(--ms-mono); color: var(--ms-soft); word-break: break-word; }
+.ms-dice-rtotal { flex: 0 0 auto; font: 800 32px var(--ms-mono); color: var(--ms-fg); }
+.ms-dice-roll { margin-top: 14px; }
 
 /* item detail sheet */
 .ms-detail-panel { max-height: 88%; overflow-y: auto; }

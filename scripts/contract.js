@@ -30,9 +30,12 @@
  *   PURE: no async, no DOM, no writes. Safe to call on every render. Reads
  *   defensively (optional chaining + fallbacks) so cross-version data drift
  *   degrades gracefully instead of throwing.
- * @property {(actor: Actor, intent: Intent) => Promise<void>} invoke
+ * @property {(actor: Actor, intent: Intent) => Promise<void|unknown>} invoke
  *   Translate an abstract intent into the system's own method. Delegates —
- *   never reimplements dice, chat, or sync. Unknown intent types: no-op.
+ *   never reimplements a SYSTEM's dice/chat/sync. Unknown intent types: no-op.
+ *   Usually resolves to nothing (the actor/item update flows back via hooks); a
+ *   few intents (rollDice) resolve to a result the shell may display inline,
+ *   since the chat log can be hidden in phone sheet-only mode.
  * @property {(actor: Actor, itemId: string) => (ItemDetail | null)} [getItemDetail]
  *   PURE (like getViewModel): build an in-sheet detail panel for one owned item.
  *   Returning `null` lets the shell fall back to the system's desktop item sheet.
@@ -51,8 +54,9 @@
 
 /**
  * @typedef {object} Intent
- * @property {"rollStat"|"rollTrait"|"useItem"|"openItem"|"adjustResource"|"setResource"|"toggleTag"|"toggleItem"|"toChat"|"expChat"|"equip"|"vault"|"rest"|"deathMove"|"primary"} type
+ * @property {"rollStat"|"rollTrait"|"rollDice"|"useItem"|"openItem"|"adjustResource"|"setResource"|"toggleTag"|"toggleItem"|"toChat"|"expChat"|"equip"|"vault"|"rest"|"deathMove"|"primary"} type
  * @property {string} [key]     Stat key (rollStat/rollTrait), resource key (adjustResource/setResource), tag key (toggleTag), experience id (expChat), or button key (rest: "short"/"long").
+ * @property {string} [formula] Dice expression for the generic dice roller (rollDice), e.g. "2d6 + 1d8 + 3".
  * @property {string} [itemId]  Item id (useItem / openItem / toggleItem / toChat / equip / vault).
  * @property {string} [uuid]    Sub-document uuid (useItem on an item's individual action).
  * @property {number} [delta]   Resource step (adjustResource), e.g. +1 / -1.

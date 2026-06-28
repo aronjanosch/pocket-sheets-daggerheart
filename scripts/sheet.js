@@ -69,6 +69,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       toggleTag: PocketSheet.#onToggleTag,
       toggleItem: PocketSheet.#onToggleItem,
       primary: PocketSheet.#onPrimary,
+      openDice: PocketSheet.#onOpenDice,
       selectTab: PocketSheet.#onSelectTab,
       selectStat: PocketSheet.#onSelectStat,
       switchActor: PocketSheet.#onSwitchActor
@@ -333,13 +334,29 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     };
   }
 
-  /** Compact labeled scale: interleave zone labels with the boundary values between them. */
+  /**
+   * Compact labeled scale: interleave zone labels with the boundary values between
+   * them. When the block names a `resource` and a segment carries a `mark`, that
+   * zone becomes a tappable button that fires an adjustResource intent (e.g. tap a
+   * damage threshold → mark that many HP). Generic: the shell only reads the
+   * normalized shape, never the system.
+   */
   #scale(b) {
     const segments = b.segments ?? [];
     const bounds = b.bounds ?? [];
+    const resourceKey = b.resource ?? "";
     const parts = [];
     segments.forEach((s, i) => {
-      parts.push({ isSegment: true, label: s?.label ?? "" });
+      const tappable = !!resourceKey && s?.mark != null;
+      parts.push({
+        isSegment: true,
+        label: s?.label ?? "",
+        sub: s?.sub ?? "",
+        hasSub: !!s?.sub,
+        tappable,
+        resourceKey,
+        delta: s?.mark != null ? String(s.mark) : ""
+      });
       if (i < segments.length - 1 && bounds[i]) parts.push({ isBound: true, value: String(bounds[i].value ?? "") });
     });
     return { kind: "scale", label: b.label ?? "", hasLabel: !!b.label, parts };
@@ -347,12 +364,14 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   // --- intent dispatch ------------------------------------------------------
 
-  /** Forward an Intent to the adapter. The shell never mutates/rolls itself. */
+  /** Forward an Intent to the adapter. The shell never mutates/rolls itself.
+   *  Returns whatever the adapter resolves to (most intents: nothing; rollDice:
+   *  the evaluated Roll, so the caller can echo it inline). */
   async #dispatch(intent) {
     const adapter = resolve(game.system.id);
     if (!adapter) return;
     try {
-      await adapter.invoke(this.actor, intent);
+      return await adapter.invoke(this.actor, intent);
     } catch (err) {
       console.error(`${MODULE_ID} | invoke failed`, intent, err);
       ui.notifications?.error(game.i18n.localize("MOBILE_SHEET.error.actionFailed"));
@@ -440,6 +459,10 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const tile = this.element?.querySelector(".ms-stat-active");
     const label = tile?.querySelector(".ms-stat-label")?.textContent ?? "";
     return this.#openRollSheet(this.#activeStatKey, label, event);
+  }
+
+  static #onOpenDice() {
+    return this.#openDiceRoller();
   }
 
   // --- shell-local actions (no adapter) -------------------------------------
@@ -764,6 +787,106 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         event: ev
       });
     });
+  }
+
+  /**
+   * General dice roller bottom sheet: tap d4–d20 to build a pool, nudge a flat
+   * modifier, then Roll. This is a generic dice tool, not a system mechanic — it
+   * builds a plain core-Foundry `Roll` (zero `actor.system` access, no duality /
+   * trait logic), evaluates it, shows the result inline, and posts it to chat so
+   * it lands in the log like any other roll. Stays open so several rolls in a row
+   * are cheap; the pool persists until cleared.
+   */
+  #openDiceRoller() {
+    const L = (k) => game.i18n.localize(`MOBILE_SHEET.dice.${k}`);
+    const DICE = ["d4", "d6", "d8", "d10", "d12", "d20"];
+    const pool = Object.fromEntries(DICE.map((d) => [d, 0]));
+    let mod = 0;
+
+    const grid = DICE.map(
+      (d) => `<button type="button" class="ms-die" data-die="${d}"><span class="ms-die-face">${d}</span><span class="ms-die-count" data-count="${d}"></span></button>`
+    ).join("");
+
+    const html = `
+      <div class="ms-grab"></div>
+      <div class="ms-sheet-head">
+        <span class="ms-sheet-title">${L("title")}</span>
+        <button type="button" class="ms-sheet-close" aria-label="Close">✕</button>
+      </div>
+      <p class="ms-dice-hint">${L("hint")}</p>
+      <div class="ms-dice-grid">${grid}</div>
+      <div class="ms-dice-pool"></div>
+      <div class="ms-dice-mod">
+        <span class="ms-dice-mod-label">${L("modifier")}</span>
+        <button type="button" class="ms-dice-mod-btn" data-step="-1">−</button>
+        <span class="ms-dice-mod-val">+0</span>
+        <button type="button" class="ms-dice-mod-btn" data-step="1">+</button>
+      </div>
+      <div class="ms-dice-result" hidden></div>
+      <button type="button" class="ms-roll-go ms-dice-roll" disabled>${L("roll")}</button>`;
+
+    const mounted = this.#mountSheet(html);
+    if (!mounted) return;
+    const { wrap, close } = mounted;
+    wrap.querySelector(".ms-sheet-panel")?.classList.add("ms-detail-panel");
+
+    const poolEl = wrap.querySelector(".ms-dice-pool");
+    const modEl = wrap.querySelector(".ms-dice-mod-val");
+    const rollBtn = wrap.querySelector(".ms-dice-roll");
+    const sign = (n) => (n >= 0 ? `+${n}` : `−${Math.abs(n)}`);
+
+    const paint = () => {
+      DICE.forEach((d) => {
+        const btn = wrap.querySelector(`.ms-die[data-die="${d}"]`);
+        const c = wrap.querySelector(`[data-count="${d}"]`);
+        btn.classList.toggle("ms-die-on", pool[d] > 0);
+        c.textContent = pool[d] > 0 ? String(pool[d]) : "";
+      });
+      modEl.textContent = sign(mod);
+      const active = DICE.filter((d) => pool[d] > 0).map((d) => `${pool[d]}${d}`);
+      let text = active.join(" + ");
+      if (mod) text += `${active.length ? "  " : ""}${sign(mod)}`;
+      poolEl.textContent = text || L("empty");
+      poolEl.classList.toggle("ms-dice-pool-empty", !active.length && !mod);
+      rollBtn.disabled = active.length === 0;
+    };
+
+    wrap.querySelectorAll(".ms-die").forEach((b) =>
+      b.addEventListener("click", () => { pool[b.dataset.die] += 1; paint(); })
+    );
+    // Right-click / long-press a die to remove one.
+    wrap.querySelectorAll(".ms-die").forEach((b) =>
+      b.addEventListener("contextmenu", (ev) => { ev.preventDefault(); pool[b.dataset.die] = Math.max(0, pool[b.dataset.die] - 1); paint(); })
+    );
+    wrap.querySelectorAll(".ms-dice-mod-btn").forEach((b) =>
+      b.addEventListener("click", () => { mod = Math.max(-20, Math.min(20, mod + Number(b.dataset.step))); paint(); })
+    );
+    wrap.querySelector(".ms-sheet-close").addEventListener("click", close);
+    wrap.querySelector(".ms-sheet-backdrop").addEventListener("click", close);
+
+    rollBtn.addEventListener("click", async () => {
+      const terms = DICE.filter((d) => pool[d] > 0).map((d) => `${pool[d]}${d}`);
+      if (!terms.length) return;
+      let f = terms.join(" + ");
+      if (mod) f += ` ${mod >= 0 ? "+" : "-"} ${Math.abs(mod)}`;
+      // Delegate the actual dice math + chat card to the adapter; it hands back
+      // the evaluated Roll so we can echo the result inline (chat may be hidden).
+      const roll = await this.#dispatch({ type: "rollDice", formula: f });
+      if (roll) this.#paintDiceResult(wrap, roll);
+    });
+
+    paint();
+  }
+
+  /** Render an evaluated Roll's per-die-type breakdown + total into the sheet. */
+  #paintDiceResult(wrap, roll) {
+    const el = wrap.querySelector(".ms-dice-result");
+    if (!el) return;
+    const groups = (roll.dice ?? [])
+      .map((d) => `<div class="ms-dice-rgroup"><span class="ms-dice-rlabel">${d.number}d${d.faces}</span><span class="ms-dice-rvals">${d.results.map((r) => r.result).join("  ·  ")}</span></div>`)
+      .join("");
+    el.innerHTML = `<div class="ms-dice-rbreak">${groups}</div><div class="ms-dice-rtotal">${roll.total}</div>`;
+    el.hidden = false;
   }
 
   // --- live re-render --------------------------------------------------------

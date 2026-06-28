@@ -1,10 +1,21 @@
 {{!-- ScaleBlock: compact labeled scale — zone labels split by boundary values.
-      Daggerheart damage thresholds: Minor | major# | Major | severe# | Severe. --}}
+      Daggerheart damage thresholds: Minor | major# | Major | severe# | Severe.
+      A zone with a `delta` is tappable → adjustResource (mark HP). --}}
 <section class="ms-block ms-scale">
   {{#if hasLabel}}<span class="ms-scale-caption">{{label}}</span>{{/if}}
   <div class="ms-scale-track">
     {{#each parts}}
-      {{#if this.isSegment}}<span class="ms-scale-seg">{{this.label}}</span>{{/if}}
+      {{#if this.isSegment}}
+        {{#if this.tappable}}
+          <button type="button" class="ms-scale-seg ms-scale-seg-tap"
+                  data-action="adjustResource" data-key="{{this.resourceKey}}" data-delta="{{this.delta}}">
+            <span class="ms-scale-seg-label">{{this.label}}</span>
+            {{#if this.hasSub}}<span class="ms-scale-seg-sub">{{this.sub}}</span>{{/if}}
+          </button>
+        {{else}}
+          <span class="ms-scale-seg">{{this.label}}</span>
+        {{/if}}
+      {{/if}}
       {{#if this.isBound}}<span class="ms-scale-bound">{{this.value}}</span>{{/if}}
     {{/each}}
   </div>
