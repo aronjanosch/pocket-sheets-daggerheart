@@ -737,11 +737,10 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   /**
    * Open the roll bottom sheet for a stat: an Advantage / Normal / Disadvantage
-   * toggle plus an optional difficulty, then Roll. Dispatches a `rollTrait` intent
-   * carrying the gathered config; the adapter performs the real system roll without
-   * the system's own roll dialog. Advantage/difficulty are generic enough to stay
-   * shell-owned — the adapter decides how to map them. Falls back to the plain
-   * primary intent when no rollable stat is armed.
+   * toggle, then Roll. Dispatches a `rollTrait` intent carrying the choice; the
+   * adapter performs the real system roll without the system's own dialog. The GM
+   * sets difficulty against the result, so the player sheet doesn't ask for it.
+   * Falls back to the plain primary intent when no rollable stat is armed.
    */
   #openRollSheet(key, label, event) {
     if (!key) return this.#dispatch({ type: "primary", event });
@@ -757,10 +756,6 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         <button type="button" class="ms-adv-opt ms-adv-on" data-adv="neutral">${L("normal")}</button>
         <button type="button" class="ms-adv-opt ms-adv-adv" data-adv="advantage">${L("advantage")}</button>
       </div>
-      <label class="ms-roll-diff">
-        <span class="ms-roll-diff-label">${L("difficulty")}</span>
-        <input type="number" class="ms-roll-diff-input" inputmode="numeric" min="0" step="1" placeholder="—">
-      </label>
       <button type="button" class="ms-roll-go">${L("roll")}</button>`;
 
     const mounted = this.#mountSheet(html);
@@ -777,15 +772,8 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     wrap.querySelector(".ms-sheet-close").addEventListener("click", close);
     wrap.querySelector(".ms-sheet-backdrop").addEventListener("click", close);
     wrap.querySelector(".ms-roll-go").addEventListener("click", (ev) => {
-      const raw = wrap.querySelector(".ms-roll-diff-input")?.value ?? "";
       close();
-      this.#dispatch({
-        type: "rollTrait",
-        key,
-        advantage: adv,
-        difficulty: raw === "" ? null : Number(raw),
-        event: ev
-      });
+      this.#dispatch({ type: "rollTrait", key, advantage: adv, difficulty: null, event: ev });
     });
   }
 
