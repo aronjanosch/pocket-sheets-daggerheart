@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping make Pocket Sheet better. The highest-value contribution is usually **a new system adapter** — that's the whole point of the architecture.
+Thanks for helping make Pocket Sheets — Daggerheart better. The highest-value contribution is usually **a new system adapter** — that's the whole point of the architecture.
 
 ## Ground rules
 
@@ -20,7 +20,7 @@ scripts/
 adapters/
   <system>.js          one file per system (the extension point)
 templates/             shell template + block partials (Phase 1)
-styles/pocket-sheet.css
+styles/pocket-sheets-daggerheart.css
 lang/en.json
 ```
 
@@ -83,9 +83,9 @@ Built-in adapters import and `register()` from their own `init` hook (as above).
 A **third-party module** can register without touching this repo at all — listen for the ready hook or use the public API. Both are load-order safe:
 
 ```js
-Hooks.on("pocketSheet.ready", (api) => api.register(myAdapter));
+Hooks.on("pocketSheetsDaggerheart.ready", (api) => api.register(myAdapter));
 // or:
-game.modules.get("pocket-sheet")?.api?.register(myAdapter);
+game.modules.get("pocket-sheets-daggerheart")?.api?.register(myAdapter);
 ```
 
 ### 3. The view model
@@ -104,7 +104,7 @@ Adding a block kind touches the shell and is reviewed for cross-system value —
 ### Rules that keep adapters thin
 
 - `getViewModel` is **pure** — no async, no DOM, no writes. It runs on every render.
-- Return **display-ready strings** (`"Hope"`, `"Agility"`). The adapter owns its system's vocabulary; localize via the `pocket-sheet` lang files. The shell never resolves system i18n keys.
+- Return **display-ready strings** (`"Hope"`, `"Agility"`). The adapter owns its system's vocabulary; localize via the `pocket-sheets-daggerheart` lang files. The shell never resolves system i18n keys.
 - Read **defensively** — optional chaining and fallbacks — so a system's v13-vs-v14 data-shape differences degrade gracefully instead of throwing.
 - Use `checkAvailability` to refuse a version you can't read; the shell shows your `reason` instead of crashing.
 

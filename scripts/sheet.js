@@ -1,5 +1,5 @@
 /**
- * Pocket Sheet — the core shell (v2: themed, tabbed block vocabulary).
+ * Pocket Sheets — Daggerheart — the core shell (v2: themed, tabbed block vocabulary).
  *
  * A registered ActorSheetV2 that renders ONLY the normalized view model from an
  * adapter (contract.js). It contains zero system knowledge: it never reads
@@ -56,7 +56,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   #lastRoll = null;
 
   static DEFAULT_OPTIONS = {
-    classes: ["pocket-sheet", "ms-sheet"],
+    classes: ["pocket-sheets-daggerheart", "ms-sheet"],
     position: { width: 430, height: 860 },
     window: { resizable: true },
     actions: {

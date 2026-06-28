@@ -1,5 +1,5 @@
 /**
- * Pocket Sheet — adapter contract (v2: themed, tabbed block vocabulary).
+ * Pocket Sheets — Daggerheart — adapter contract (v2: themed, tabbed block vocabulary).
  *
  * JSDoc typedefs only. No runtime logic lives here. This file is the single
  * source of truth for the interface every system adapter implements and the

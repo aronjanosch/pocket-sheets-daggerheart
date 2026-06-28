@@ -1,13 +1,13 @@
 {
-  "MOBILE_SHEET.title": "Pocket Sheet",
-  "MOBILE_SHEET.sheet.label": "Pocket Sheet",
+  "MOBILE_SHEET.title": "Pocket Sheets — Daggerheart",
+  "MOBILE_SHEET.sheet.label": "Pocket Sheets — Daggerheart",
 
   "MOBILE_SHEET.state.noAdapter": "No mobile sheet for this system yet.",
   "MOBILE_SHEET.state.noAdapterHint": "Want one? See the contributing guide to add an adapter.",
   "MOBILE_SHEET.state.unsupported": "This system version isn't supported yet.",
   "MOBILE_SHEET.state.empty": "Nothing to show for this character yet.",
 
-  "MOBILE_SHEET.error.actionFailed": "Pocket Sheet: that action failed.",
+  "MOBILE_SHEET.error.actionFailed": "Pocket Sheets — Daggerheart: that action failed.",
 
   "MOBILE_SHEET.action.equip": "Equip / Unequip",
   "MOBILE_SHEET.action.vault": "Move to vault / loadout",
@@ -160,5 +160,5 @@
   "MOBILE_SHEET.daggerheart.primary.duality": "✦ Duality Roll",
 
   "MOBILE_SHEET.daggerheart.unsupported.version": "Requires Daggerheart 2.x — your version is older.",
-  "MOBILE_SHEET.daggerheart.unsupported.api": "This Daggerheart version isn't supported by Pocket Sheet yet."
+  "MOBILE_SHEET.daggerheart.unsupported.api": "This Daggerheart version isn't supported by Pocket Sheets — Daggerheart yet."
 }

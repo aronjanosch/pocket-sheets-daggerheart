@@ -1,8 +1,8 @@
 /**
- * Pocket Sheet — adapter registry (Phase 0).
+ * Pocket Sheets — Daggerheart — adapter registry (Phase 0).
  *
  * The extension point. Built-in adapters self-register on `init`; third-party
- * adapters register via the public module API or the `pocketSheet.ready` hook
+ * adapters register via the public module API or the `pocketSheetsDaggerheart.ready` hook
  * (see scripts/main.js). A new system = one adapter file, zero core changes,
  * no load-order coupling.
  *
@@ -19,7 +19,7 @@ const adapters = new Map();
  */
 export function register(adapter) {
   if (!adapter?.systemId) {
-    console.error("pocket-sheet | register called without a systemId", adapter);
+    console.error("pocket-sheets-daggerheart | register called without a systemId", adapter);
     return;
   }
   adapters.set(adapter.systemId, adapter);

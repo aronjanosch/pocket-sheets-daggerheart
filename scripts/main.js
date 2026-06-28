@@ -1,5 +1,5 @@
 /**
- * Pocket Sheet — entry point.
+ * Pocket Sheets — Daggerheart — entry point.
  *
  * Wires the adapter registry, the public extension API, the Handlebars helper /
  * partials, and registers the shell sheet. With no adapter for the active system
@@ -7,7 +7,7 @@
  *
  * Load-order safety (spec phase-0 §6): the API is attached to the module record
  * at `init` (so adapters registering from their own `init` find it), and the
- * `pocketSheet.ready` hook fires at `setup` (after every module's `init`). The
+ * `pocketSheetsDaggerheart.ready` hook fires at `setup` (after every module's `init`). The
  * shell sheet is registered at `ready`, once all adapters have had both chances
  * to register, so its actor-type restriction reflects the resolved adapter.
  */
@@ -62,7 +62,7 @@ Hooks.once("setup", () => {
   applyMobileCanvasMode();
 
   // After every module's `init` — third-party adapters listening for this register now.
-  Hooks.callAll("pocketSheet.ready", api);
+  Hooks.callAll("pocketSheetsDaggerheart.ready", api);
 });
 
 Hooks.once("ready", () => {

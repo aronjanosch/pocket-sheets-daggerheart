@@ -1,5 +1,5 @@
 /*
- * Pocket Sheet — themed, mobile-first styles ("Modular Sheet Architecture").
+ * Pocket Sheets — Daggerheart — themed, mobile-first styles ("Modular Sheet Architecture").
  *
  * The shell owns ALL visual design. A system adapter ships only its accent color
  * (injected as --ms-accent / --ms-accent-deep on .ms-root). Everything else —
@@ -8,7 +8,7 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 
-.pocket-sheet {
+.pocket-sheets-daggerheart {
   /* Dark-parchment palette (fixed; theme only changes the accent). */
   --ms-bg: #13110c;
   --ms-surf: #1d1810;
@@ -40,7 +40,7 @@
 }
 
 /* The ApplicationV2 window content host. */
-.pocket-sheet .window-content {
+.pocket-sheets-daggerheart .window-content {
   padding: 0;
   background: radial-gradient(130% 90% at 50% -8%, #221b10 0%, var(--ms-bg) 55%);
   color: var(--ms-fg);
@@ -957,15 +957,15 @@
 /* Set by launcher.js when on a phone with the canvas disabled: hide all of
  * Foundry's chrome and let the sheet fill the viewport. The sheet, launcher and
  * popouts live on <body>, outside #interface, so only the chrome disappears. */
-body.pocket-sheet-only #interface,
-body.pocket-sheet-only #pause,
-body.pocket-sheet-only #tooltip {
+body.pocket-sheets-daggerheart-only #interface,
+body.pocket-sheets-daggerheart-only #pause,
+body.pocket-sheets-daggerheart-only #tooltip {
   display: none !important;
 }
 
 /* Fullscreen the sheet (only — never the actor picker). !important beats the
  * inline width/height/top/left ApplicationV2 writes from its position. */
-body.pocket-sheet-only .pocket-sheet.ms-sheet {
+body.pocket-sheets-daggerheart-only .pocket-sheets-daggerheart.ms-sheet {
   position: fixed !important;
   inset: 0 !important;
   width: 100vw !important;
@@ -978,13 +978,13 @@ body.pocket-sheet-only .pocket-sheet.ms-sheet {
 }
 
 /* No window frame in fullscreen — the sheet owns its whole surface. */
-body.pocket-sheet-only .ms-sheet .window-header,
-body.pocket-sheet-only .ms-sheet .window-resize-handle {
+body.pocket-sheets-daggerheart-only .ms-sheet .window-header,
+body.pocket-sheets-daggerheart-only .ms-sheet .window-resize-handle {
   display: none !important;
 }
 
 /* Keep the launcher tappable above the fullscreen sheet and any popout. */
-body.pocket-sheet-only .ms-fab {
+body.pocket-sheets-daggerheart-only .ms-fab {
   z-index: 2147483000;
 }
 

@@ -1,20 +1,20 @@
-# Pocket Sheet
+# Pocket Sheets — Daggerheart
 
 A free, MIT-licensed [Foundry VTT](https://foundryvtt.com/) module: **mobile-friendly character sheets for in-person play.**
 
 Players open their character sheet on a phone or tablet; the GM drives one shared map on a big screen — mirroring how a real in-person session works.
 
-> **Scope:** This is *not* a VTT. It is *only* the mobile character sheet. The shared map, token movement, live sync, permissions, dice, and chat are already provided by Foundry core — Pocket Sheet does not rebuild them.
+> **Scope:** This is *not* a VTT. It is *only* the mobile character sheet. The shared map, token movement, live sync, permissions, dice, and chat are already provided by Foundry core — Pocket Sheets — Daggerheart does not rebuild them.
 
 ## Installation
 
 In Foundry: **Add-on Modules → Install Module**, paste this manifest URL:
 
 ```
-https://github.com/aronjanosch/pocket-sheet/releases/latest/download/module.json
+https://github.com/aronjanosch/pocket-sheets-daggerheart/releases/latest/download/module.json
 ```
 
-Then enable **Pocket Sheet** in your world's module settings.
+Then enable **Pocket Sheets — Daggerheart** in your world's module settings.
 
 ## Status
 

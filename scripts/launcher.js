@@ -1,5 +1,5 @@
 /**
- * Pocket Sheet — activation layer (Phase 3). See specs/phase-3-activation.md.
+ * Pocket Sheets — Daggerheart — activation layer (Phase 3). See specs/phase-3-activation.md.
  *
  * Decides WHEN to present the mobile sheet and FOR WHICH actor — never what it
  * renders (that is the adapter). Purely client-side presentation: reads no
@@ -221,7 +221,7 @@ export function openPocketSheet(actor) {
 export class ActorSelector extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: "ms-actor-selector",
-    classes: ["pocket-sheet", "ms-actor-selector"],
+    classes: ["pocket-sheets-daggerheart", "ms-actor-selector"],
     tag: "div",
     window: { title: "MOBILE_SHEET.launcher.selectTitle" },
     position: { width: 360, height: "auto" },
@@ -295,7 +295,7 @@ function installLauncherFab() {
  */
 export function applyMobileChrome() {
   const on = isMobile() && game.settings.get("core", "noCanvas");
-  document.body.classList.toggle("pocket-sheet-only", on);
+  document.body.classList.toggle("pocket-sheets-daggerheart-only", on);
 }
 
 // --- entry point (call from `ready`) ---------------------------------------
@@ -309,7 +309,7 @@ export function activateLauncher() {
   applyMobileChrome();
   // In fullscreen sheet-only mode the sheet can't be closed and carries its own
   // character switcher (tap the portrait), so the FAB is redundant — skip it.
-  const sheetOnly = document.body.classList.contains("pocket-sheet-only");
+  const sheetOnly = document.body.classList.contains("pocket-sheets-daggerheart-only");
   if (shouldShowFab() && !sheetOnly) installLauncherFab();
   if (!shouldActivate()) return;
 

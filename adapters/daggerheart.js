@@ -1,5 +1,5 @@
 /**
- * Pocket Sheet — Daggerheart (Foundryborne) adapter (v2: themed, tabbed).
+ * Daggerheart (Foundryborne) adapter (v2: themed, tabbed).
  *
  * The only place Daggerheart knowledge lives. Two halves:
  *   - read: getViewModel(actor) is PURE — maps actor.system → themed tabs + blocks.
@@ -561,7 +561,7 @@ async function getActionConfig(actor, ref = {}) {
 }
 
 /**
- * Use an action with the player's pocket-sheet choices injected, suppressing every
+ * Use an action with the player's pocket-sheets-daggerheart choices injected, suppressing every
  * desktop popup. The only seam is the synchronous `preUseAction` hook (fired after the
  * config's roll/dialog are built, before the workflow) — so all choices are decided up
  * front in the bottom sheet and applied here. A reaction generates no Fear; experiences
@@ -664,7 +664,7 @@ function openRest(actor, key) {
 
 // --- rest (pocket Downtime) --------------------------------------------------
 //
-// The system's Downtime is a desktop ApplicationV2. Pocket Sheet replaces it with a
+// The system's Downtime is a desktop ApplicationV2. Pocket Sheets — Daggerheart replaces it with a
 // bottom sheet: pick the rest's moves (gated by the same per-category budget), then
 // replicate `DhpDowntime.takeDowntime` — post the system's own downtime chat card and
 // reset the same refreshables. The card's action buttons (heal, clear stress…) are the
