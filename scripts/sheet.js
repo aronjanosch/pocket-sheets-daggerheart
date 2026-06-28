@@ -243,6 +243,19 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     ];
   }
 
+  /** Whether the Chat / Journal screen is currently ON SCREEN — phone (top mode swap) or
+   *  iPad (the always-on right rail, unless collapsed). Drives the live-render hooks. */
+  #chatVisible() {
+    return this.#isIpad()
+      ? this.#companionMode === "chat" && !this.#rightCollapsed
+      : this.#activeMode === "chat";
+  }
+  #journalVisible() {
+    return this.#isIpad()
+      ? this.#companionMode === "journal" && !this.#rightCollapsed
+      : this.#activeMode === "journal";
+  }
+
   /** The three top-level modes for the switcher, with an unread badge on Chat. */
   #modes(isChatMode) {
     const L = (k) => game.i18n.localize(`MOBILE_SHEET.mode.${k}`);
@@ -262,7 +275,10 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    *  so a table-wide message never forces a full re-render (which would wipe an open bottom
    *  sheet). The badge slot is always in the DOM, just hidden when the count is zero. */
   #paintBadge() {
-    const el = this.element?.querySelector('.ms-mode[data-mode="chat"] .ms-mode-badge');
+    // Phone: the mode switch badge; iPad: the right-rail companion badge.
+    const el = this.element?.querySelector(
+      '.ms-mode[data-mode="chat"] .ms-mode-badge, .ms-companion-tab[data-mode="chat"] .ms-mode-badge'
+    );
     if (!el) return;
     const text = this.#badgeText(this.#unreadCount());
     el.textContent = text;
@@ -329,7 +345,11 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         hasDamage: !!card.damage,
         dmgLabel: card.damage?.label ?? "",
         dmgFormula: card.damage?.formula ?? "",
-        dmgTotal: card.damage?.total != null ? String(card.damage.total) : ""
+        dmgTotal: card.damage?.total != null ? String(card.damage.total) : "",
+        // The message's full rendered card (formula, dice tooltip, etc) — shown on tap so a
+        // phone player can see the breakdown the compact card omits. Core-rendered HTML.
+        detail: m.content ?? "",
+        hasDetail: !!m.content
       };
     }
 
@@ -1003,6 +1023,16 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (this.#chatHadFocus) {
       input.focus();
       input.setSelectionRange(input.value.length, input.value.length); // caret to end
+    }
+
+    // Tap a roll card to expand/collapse its full Foundry breakdown (formula, dice tooltip).
+    // Pure DOM toggle — no re-render — and a tap inside the expanded detail (e.g. a link)
+    // doesn't collapse it. Foundry's own dice tooltips are forced open via CSS in the detail.
+    for (const card of root.querySelectorAll(".ms-chat-roll-expandable")) {
+      card.addEventListener("click", (ev) => {
+        if (ev.target.closest(".ms-chat-roll-detail")) return;
+        card.classList.toggle("ms-roll-open");
+      });
     }
 
     // Pin to the bottom so the latest message is in view (chat reads newest-last). Deferred
@@ -1856,8 +1886,8 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // Chat + journal are core-Foundry collections the shell mirrors. Only full-render for a
     // mode while it is the one on screen — a table-wide chat message must NOT re-render the
     // sheet (it would wipe an open bottom sheet); off-screen it just repaints the unread badge.
-    const onChat = () => { if (this.#activeMode === "chat") this.render(); else this.#paintBadge(); };
-    const onJournal = () => { if (this.#activeMode === "journal") this.render(); };
+    const onChat = () => { if (this.#chatVisible()) this.render(); else this.#paintBadge(); };
+    const onJournal = () => { if (this.#journalVisible()) this.render(); };
     for (const hook of ["createChatMessage", "updateChatMessage", "deleteChatMessage"]) {
       this.#hookIds[hook] = Hooks.on(hook, onChat);
     }

@@ -7,7 +7,7 @@
 
   {{#each chat.messages}}
     {{#if this.isRoll}}
-      <div class="ms-chat-row ms-chat-roll ms-roll-{{this.rollOutcome}}" style="--avc:{{this.color}}">
+      <div class="ms-chat-row ms-chat-roll ms-roll-{{this.rollOutcome}}{{#if this.hasDetail}} ms-chat-roll-expandable{{/if}}" style="--avc:{{this.color}}"{{#if this.hasDetail}} data-roll-expand{{/if}}>
         <div class="ms-chat-roll-head">
           <span class="ms-chat-avatar">{{this.initials}}</span>
           <span class="ms-chat-roll-who">
@@ -15,6 +15,7 @@
             {{#if this.hasAction}}<span class="ms-chat-action">{{this.action}}</span>{{/if}}
           </span>
           <span class="ms-chat-time">{{this.time}}</span>
+          {{#if this.hasDetail}}<span class="ms-chat-roll-chev" aria-hidden="true">▾</span>{{/if}}
         </div>
         <div class="ms-chat-roll-body">
           {{#if this.hasHope}}<span class="ms-roll-die ms-roll-die-hope">{{this.hope}}</span>{{/if}}
@@ -32,6 +33,7 @@
             <span class="ms-roll-dmg-unit">{{localize "MOBILE_SHEET.chat.dmg"}}</span>
           </div>
         {{/if}}
+        {{#if this.hasDetail}}<div class="ms-chat-roll-detail">{{{this.detail}}}</div>{{/if}}
       </div>
     {{/if}}
 
