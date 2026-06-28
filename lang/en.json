@@ -63,6 +63,7 @@
   "MOBILE_SHEET.chat.empty": "No messages yet.",
   "MOBILE_SHEET.chat.whisper": "Whisper",
   "MOBILE_SHEET.chat.dmg": "dmg",
+  "MOBILE_SHEET.chat.roll": "Roll",
 
   "MOBILE_SHEET.journal.search": "Search journal…",
   "MOBILE_SHEET.journal.empty": "No entries match your search.",

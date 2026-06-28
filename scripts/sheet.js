@@ -345,11 +345,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         hasDamage: !!card.damage,
         dmgLabel: card.damage?.label ?? "",
         dmgFormula: card.damage?.formula ?? "",
-        dmgTotal: card.damage?.total != null ? String(card.damage.total) : "",
-        // Tap-to-expand breakdown, built from the Roll objects themselves (reliable +
-        // already-escaped) rather than re-injecting the system's chat HTML.
-        detail: this.#rollDetailHtml(m.rolls),
-        hasDetail: (m.rolls?.length ?? 0) > 0
+        dmgTotal: card.damage?.total != null ? String(card.damage.total) : ""
       };
     }
 
@@ -372,9 +368,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         total: String(total),
         action: flavor,
         hasAction: !!flavor,
-        hasHope: false, hasFear: false, hasAdv: false, hasDamage: false,
-        detail: this.#rollDetailHtml(rolls),
-        hasDetail: true
+        hasHope: false, hasFear: false, hasAdv: false, hasDamage: false
       };
     }
 
@@ -386,29 +380,6 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const d = document.createElement("div");
     d.innerHTML = html ?? "";
     return (d.textContent || "").trim();
-  }
-
-  /** A roll's breakdown as safe HTML: one line per Roll (formula = total) plus the
-   *  individual die faces. Built from the Roll data, so it works for any roll the table
-   *  produces, with no dependence on the system's chat-card markup or core's tooltip JS. */
-  #rollDetailHtml(rolls) {
-    const esc = (s) => Handlebars.escapeExpression(s ?? "");
-    return (rolls ?? [])
-      .map((r) => {
-        const faces = (r.dice ?? [])
-          .map((d) => {
-            const pips = (d.results ?? [])
-              .map((res) => `<span class="ms-roll-face${res.discarded ? " ms-roll-face-x" : ""}">${esc(res.result)}</span>`)
-              .join("");
-            return `<span class="ms-roll-term"><span class="ms-roll-term-die">d${esc(d.faces)}</span>${pips}</span>`;
-          })
-          .join("");
-        return `<div class="ms-roll-line">
-            <span class="ms-roll-line-formula">${esc(r.formula)}</span>
-            <span class="ms-roll-line-total">${esc(r.total)}</span>
-          </div>${faces ? `<div class="ms-roll-faces">${faces}</div>` : ""}`;
-      })
-      .join("");
   }
 
   // --- journal mode (core Foundry; read-only) -------------------------------
@@ -1074,16 +1045,6 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (this.#chatHadFocus) {
       input.focus();
       input.setSelectionRange(input.value.length, input.value.length); // caret to end
-    }
-
-    // Tap a roll card to expand/collapse its full Foundry breakdown (formula, dice tooltip).
-    // Pure DOM toggle — no re-render — and a tap inside the expanded detail (e.g. a link)
-    // doesn't collapse it. Foundry's own dice tooltips are forced open via CSS in the detail.
-    for (const card of root.querySelectorAll(".ms-chat-roll-expandable")) {
-      card.addEventListener("click", (ev) => {
-        if (ev.target.closest(".ms-chat-roll-detail")) return;
-        card.classList.toggle("ms-roll-open");
-      });
     }
 
     // Pin to the bottom so the latest message is in view (chat reads newest-last). Deferred
