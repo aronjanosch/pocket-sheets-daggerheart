@@ -1,0 +1,65 @@
+{{!-- Journal mode: read-only browse of the world's visible JournalEntries. Shell-built from
+      core game.journal. List filters live in JS (see #wireJournal); reader enriches pages. --}}
+<div class="ms-body ms-jrnl-body">
+
+  {{#if journal.isList}}
+    <div class="ms-jrnl-search">
+      <span class="ms-jrnl-search-icon">⌕</span>
+      <input type="text" class="ms-jrnl-search-input" autocomplete="off" autocapitalize="off"
+             spellcheck="false" value="{{journal.query}}"
+             placeholder="{{localize "MOBILE_SHEET.journal.search"}}" />
+    </div>
+
+    {{#each journal.entries}}
+      <button type="button" class="ms-jrnl-entry" data-action="openJournalEntry"
+              data-id="{{this.id}}" data-search="{{this.search}}">
+        <span class="ms-jrnl-thumb">{{this.catGlyph}}</span>
+        <span class="ms-jrnl-entry-text">
+          <span class="ms-jrnl-entry-meta">
+            <span class="ms-jrnl-cat">{{this.cat}}</span>
+            {{#if this.meta}}<span class="ms-jrnl-time">{{this.meta}}</span>{{/if}}
+          </span>
+          <span class="ms-jrnl-title">{{this.title}}</span>
+        </span>
+        <span class="ms-jrnl-chev">›</span>
+      </button>
+    {{/each}}
+
+    <div class="ms-jrnl-empty"{{#unless journal.empty}} style="display:none"{{/unless}}>
+      {{localize "MOBILE_SHEET.journal.empty"}}
+    </div>
+  {{/if}}
+
+  {{#if journal.isReading}}
+    <div class="ms-jrnl-reader">
+      <button type="button" class="ms-jrnl-back" data-action="journalBack">‹ {{localize "MOBILE_SHEET.journal.allEntries"}}</button>
+      <div class="ms-jrnl-reader-head">
+        <span class="ms-jrnl-cat">{{journal.reader.cat}}</span>
+        <h3 class="ms-jrnl-reader-title">{{journal.reader.title}}</h3>
+        {{#if journal.reader.byline}}<div class="ms-jrnl-reader-byline">{{journal.reader.byline}}</div>{{/if}}
+      </div>
+
+      {{#if journal.reader.hasPages}}
+        <div class="ms-jrnl-pages">
+          {{#each journal.reader.pageTabs}}
+            <button type="button" class="ms-jrnl-page{{#if this.active}} ms-jrnl-page-active{{/if}}"
+                    data-action="journalPage" data-page="{{this.page}}">{{this.title}}</button>
+          {{/each}}
+        </div>
+      {{/if}}
+
+      {{#if journal.reader.isImage}}
+        <img class="ms-jrnl-image" src="{{journal.reader.src}}" alt="{{journal.reader.caption}}" />
+        {{#if journal.reader.caption}}<div class="ms-jrnl-caption">{{journal.reader.caption}}</div>{{/if}}
+      {{/if}}
+
+      {{#if journal.reader.isText}}
+        <div class="ms-jrnl-text">{{{journal.reader.html}}}</div>
+      {{/if}}
+
+      {{#if journal.reader.empty}}
+        <div class="ms-jrnl-empty">{{localize "MOBILE_SHEET.journal.emptyEntry"}}</div>
+      {{/if}}
+    </div>
+  {{/if}}
+</div>

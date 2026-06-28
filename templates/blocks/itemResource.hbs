@@ -1,0 +1,33 @@
+{{!-- ItemResource: an item-owned resource. Dice pool (tap a die to spend, reroll button)
+      or a ± stepper for an escalating die / simple counter. itemId-scoped intents. --}}
+<section class="ms-block ms-itemres {{toneClass}}" data-item-id="{{itemId}}">
+  <div class="ms-resource-head">
+    <span class="ms-resource-label">{{label}}</span>
+    {{#if isDice}}
+      <button type="button" class="ms-itemres-roll" data-action="rollResourceDice" data-item-id="{{itemId}}"
+              title="{{localize "MOBILE_SHEET.action.roll"}}" aria-label="{{localize "MOBILE_SHEET.action.roll"}}">
+        <i class="fa-solid fa-dice"></i>
+      </button>
+    {{else}}
+      <span class="ms-resource-value"><span class="ms-rv-cur">{{value}}</span>{{#if hasMax}}<span class="ms-resource-max">/{{max}}</span>{{/if}}</span>
+    {{/if}}
+  </div>
+
+  {{#if isDice}}
+    <div class="ms-itemres-dice">
+      {{#each dice}}
+        <button type="button" class="ms-itemres-die{{#if this.used}} ms-itemres-die-used{{/if}}{{#if this.unrolled}} ms-itemres-die-empty{{/if}}"
+                data-action="toggleResourceDie" data-item-id="{{../itemId}}" data-key="{{this.index}}">
+          {{#if ../hasImg}}<img class="ms-itemres-die-img" src="{{../img}}" alt="">{{/if}}
+          <span class="ms-itemres-die-val">{{this.label}}</span>
+        </button>
+      {{/each}}
+    </div>
+  {{else}}
+    <div class="ms-itemres-stepper">
+      {{#if hasImg}}<img class="ms-itemres-die-img ms-itemres-die-single" src="{{img}}" alt="">{{/if}}
+      <button type="button" class="ms-dice-mod-btn" data-action="adjustItemResource" data-item-id="{{itemId}}" data-delta="-1">−</button>
+      <button type="button" class="ms-dice-mod-btn" data-action="adjustItemResource" data-item-id="{{itemId}}" data-delta="1">+</button>
+    </div>
+  {{/if}}
+</section>

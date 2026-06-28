@@ -37,13 +37,17 @@ Hooks.once("init", () => {
   // Pre-register block partials so the template's dynamic `{{> path}}` resolves.
   foundry.applications.handlebars.loadTemplates([
     `modules/${MODULE_ID}/templates/blocks/resource.hbs`,
+    `modules/${MODULE_ID}/templates/blocks/itemResource.hbs`,
     `modules/${MODULE_ID}/templates/blocks/statGrid.hbs`,
     `modules/${MODULE_ID}/templates/blocks/tags.hbs`,
     `modules/${MODULE_ID}/templates/blocks/actionList.hbs`,
     `modules/${MODULE_ID}/templates/blocks/info.hbs`,
     `modules/${MODULE_ID}/templates/blocks/heading.hbs`,
     `modules/${MODULE_ID}/templates/blocks/buttons.hbs`,
-    `modules/${MODULE_ID}/templates/blocks/scale.hbs`
+    `modules/${MODULE_ID}/templates/blocks/scale.hbs`,
+    // Mode partials (Chat / Journal) — referenced by path like the block partials above.
+    `modules/${MODULE_ID}/templates/chat.hbs`,
+    `modules/${MODULE_ID}/templates/journal.hbs`
   ]);
 
   // Activation layer: when/where to auto-present the sheet (Phase 3).

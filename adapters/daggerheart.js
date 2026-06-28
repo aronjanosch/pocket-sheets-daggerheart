@@ -54,6 +54,115 @@ function clamp(n, min, max) {
   return n;
 }
 
+/**
+ * Resolve an item-resource formula (`resource.max`) to a number, the way the system
+ * does (itemAbleRollParse): an `item.@…` formula reads the item's roll data, anything
+ * else reads the actor's. PURE/sync — safe inside getViewModel. Null when unresolvable.
+ */
+function parseItemFormula(formula, actor, item) {
+  if (formula == null || formula === "") return null;
+  if (typeof formula === "number") return formula;
+  try {
+    const isItemTarget = String(formula).toLowerCase().includes("item.@");
+    const sliced = isItemTarget ? String(formula).replaceAll(/item\.@/gi, "@") : String(formula);
+    const data = (isItemTarget ? item?.getRollData?.() : actor?.getRollData?.()) ?? {};
+    const n = Number(Roll.replaceFormulaData(sliced, data));
+    return Number.isFinite(n) ? n : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Faces count from a die-faces string ("d12" → 12), or null. */
+function dieFacesMax(faces) {
+  const n = Number(String(faces ?? "").split("d")[1]);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** Hope-die svg the system ships for a given die size — lets the pocket sheet show the
+ *  same dice the default/sleek sheets do. */
+function dieFacesImg(faces) {
+  return `systems/${SYSTEM_ID}/assets/icons/dice/hope/${faces ?? "d4"}.svg`;
+}
+
+/**
+ * One owned item's `system.resource` → a normalized itemResource block, or null when the
+ * item carries no resource. Three system shapes (CONFIG.DH.ITEM.itemResourceTypes):
+ *   - diceValue: a pool of dice (Seraph Prayer Dice) — each die has a rolled value and a
+ *                spent flag; the player rerolls the pool and taps a die to spend it.
+ *   - die      : a single escalating die (value 0…faces) advanced with the stepper.
+ *   - simple   : a plain counter (value 0…max), `max` a formula resolved per actor/item.
+ */
+function itemResourceBlock(actor, item) {
+  const res = item?.system?.resource;
+  if (!res || !res.type) return null;
+
+  if (res.type === "diceValue") {
+    const count = parseItemFormula(res.max, actor, item) ?? 0;
+    const states = res.diceStates ?? {};
+    const dice = [];
+    for (let i = 0; i < count; i++) {
+      const s = states[i] ?? states[String(i)];
+      dice.push({ index: i, value: s?.value ?? null, used: !!s?.used });
+    }
+    return { kind: "itemResource", variant: "dice", itemId: item.id, label: item.name, tone: "accent", img: dieFacesImg(res.dieFaces), dice };
+  }
+
+  if (res.type === "die") {
+    return {
+      kind: "itemResource", variant: "die", itemId: item.id, label: item.name, tone: "accent",
+      img: dieFacesImg(res.dieFaces), value: res.value ?? 0, max: dieFacesMax(res.dieFaces)
+    };
+  }
+
+  return {
+    kind: "itemResource", variant: "count", itemId: item.id, label: item.name, tone: "accent",
+    value: res.value ?? 0, max: parseItemFormula(res.max, actor, item)
+  };
+}
+
+/** Every owned item that tracks a resource (Seraph Prayer Dice, class counters, …),
+ *  surfaced on Vitals so they're visible and rollable like the default/sleek sheets. */
+function itemResourceBlocks(actor) {
+  return (actor.items ?? [])
+    .filter((i) => i.system?.resource?.type)
+    .map((i) => itemResourceBlock(actor, i))
+    .filter(Boolean);
+}
+
+/** Reroll a dice-pool resource: roll `count d<faces>`, post the dice to chat, and write
+ *  the fresh (unspent) values — the pocket equivalent of the system's ResourceDiceDialog. */
+async function rerollItemDice(actor, itemId) {
+  const item = actor.items?.get(itemId);
+  const res = item?.system?.resource;
+  if (!res || res.type !== "diceValue") return;
+  const count = parseItemFormula(res.max, actor, item) ?? 0;
+  if (count <= 0) return;
+  const roll = await new Roll(`${count}${res.dieFaces ?? "d4"}`).evaluate();
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: item.name });
+  const results = roll.terms?.[0]?.results ?? [];
+  const diceStates = results.reduce((acc, r, i) => { acc[i] = { value: r.result, used: false }; return acc; }, {});
+  return item.update({ "system.resource.diceStates": diceStates });
+}
+
+/** Toggle one die of a dice-pool resource spent/unspent (mirrors #toggleResourceDice). */
+function toggleItemDie(actor, itemId, index) {
+  const item = actor.items?.get(itemId);
+  const res = item?.system?.resource;
+  if (!res || res.type !== "diceValue") return;
+  const state = res.diceStates?.[index];
+  return item.update({ [`system.resource.diceStates.${index}.used`]: state ? !state.used : true });
+}
+
+/** Step a simple/die item resource's value, clamped to [0, max] (faces for a die). */
+function adjustItemResource(actor, itemId, delta) {
+  const item = actor.items?.get(itemId);
+  const res = item?.system?.resource;
+  if (!res) return;
+  const max = res.type === "die" ? dieFacesMax(res.dieFaces) : parseItemFormula(res.max, actor, item);
+  return item.update({ "system.resource.value": clamp((res.value ?? 0) + delta, 0, max) });
+}
+
 function resourceBlock(actor, key, label, tone, display) {
   const res = actor.system?.resources?.[key];
   if (!res) return null;
@@ -441,7 +550,20 @@ function topStats(actor) {
   return out;
 }
 
+/**
+ * Armor is the odd resource: `system.resources.armor` is a non-persisted mirror of
+ * `system.armorScore`, and marks live on the equipped armor item(s). The system never
+ * writes `resources.armor.value` directly — it distributes a signed change across armor
+ * sources via `system.updateArmorValue` (what toggleArmor does). So armor edits route
+ * through that, by delta, or they silently no-op.
+ */
+function adjustArmor(actor, delta) {
+  if (!delta || typeof actor.system?.updateArmorValue !== "function") return;
+  return actor.system.updateArmorValue({ value: delta });
+}
+
 function writeResource(actor, key, next) {
+  if (key === "armor") return adjustArmor(actor, next - (actor.system?.armorScore?.value ?? 0));
   const res = actor.system?.resources?.[key];
   if (!res) return;
   const clamped = clamp(next, 0, resolveMax(key, res));
@@ -449,9 +571,36 @@ function writeResource(actor, key, next) {
 }
 
 function adjustResource(actor, key, delta) {
+  if (key === "armor") return adjustArmor(actor, delta);
   const res = actor.system?.resources?.[key];
   if (!res) return;
   return writeResource(actor, key, (res.value ?? 0) + delta);
+}
+
+/** Keys the Vitals tab renders explicitly; anything else under `system.resources` is a
+ *  module/homebrew resource the system surfaces via its resource manager. */
+const BASE_RESOURCE_KEYS = new Set(["hitPoints", "stress", "hope", "armor"]);
+
+/** Custom/homebrew actor resources (CONFIG.DH.RESOURCE.character.custom → system.resources):
+ *  the parity for the default sheet's resource-manager dropdown. Empty in a vanilla world. */
+function extraResourceBlocks(actor) {
+  const res = actor.system?.resources ?? {};
+  const out = [];
+  for (const [key, r] of Object.entries(res)) {
+    if (BASE_RESOURCE_KEYS.has(key) || !r || typeof r !== "object") continue;
+    const max = typeof r.max === "number" ? r.max : null;
+    out.push({
+      kind: "resource",
+      key,
+      label: r.label ? game.i18n.localize(r.label) : key,
+      tone: "info",
+      display: max && max > 0 ? "pips" : "bar",
+      value: r.value ?? 0,
+      max,
+      editable: true
+    });
+  }
+  return out;
 }
 
 /** Toggle equipped. Armor is exclusive (only one worn) — unequip the other first. */
@@ -1016,6 +1165,52 @@ function describeRoll(config) {
   return out;
 }
 
+/** Strip tags from a system flavor string → a plain one-line action label. */
+function plainText(html) {
+  if (!html) return "";
+  try {
+    const el = document.createElement("div");
+    el.innerHTML = String(html);
+    return (el.textContent ?? "").replace(/\s+/g, " ").trim();
+  } catch (_) {
+    return String(html).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  }
+}
+
+/**
+ * Interpret a chat message into a compact duality roll card for the shell's Chat mode, or
+ * null when it isn't a duality roll (the shell then renders the message's own content). A
+ * posted duality message carries the evaluated DualityRoll as `message.rolls[0]`, rehydrated
+ * to the system's class (registered in CONFIG.Dice), so it exposes the same postEvaluate
+ * shape `describeRoll` reads: `total`, `isCritical`, `hope`/`fear` die values, `result.{duality,
+ * label}`. Reads only the roll + flavor; never writes; never throws. PURE.
+ */
+function getChatCard(message) {
+  try {
+    const r = message?.rolls?.[0];
+    if (!r || typeof r !== "object" || typeof r.total !== "number") return null;
+    const duality = r.result?.duality;
+    const hasHopeFear = r.hope?.value != null || r.fear?.value != null;
+    if (duality == null && !hasHopeFear) return null; // not a duality roll → generic render
+
+    const outcome = r.isCritical ? "crit" : duality > 0 ? "hope" : duality < 0 ? "fear" : "flat";
+    const card = { total: r.total, outcome, label: r.result?.label ?? "" };
+    const action = plainText(message.flavor);
+    if (action) card.action = action;
+    if (r.hope?.value != null) card.hope = r.hope.value;
+    if (r.fear?.value != null) card.fear = r.fear.value;
+
+    // Advantage / disadvantage die, when the roll tracked one.
+    const advVal = r.advantage?.value ?? r.advantage?.total;
+    if (typeof advVal === "number" && advVal !== 0) {
+      card.adv = { kind: advVal > 0 ? "adv" : "dis", value: Math.abs(advVal) };
+    }
+    return card;
+  } catch (_) {
+    return null;
+  }
+}
+
 /**
  * Generic dice pool → a plain Foundry roll posted to chat. Not a Daggerheart
  * mechanic (no duality / traits) — just the core dice roller the shell's dice
@@ -1284,6 +1479,11 @@ export const daggerheartAdapter = {
     return getItemDetail(actor, itemId);
   },
 
+  /** PURE: one chat message → a compact duality roll card, or null for generic render. */
+  getChatCard(message) {
+    return getChatCard(message);
+  },
+
   /** Inspect which desktop popup an item/action use would raise, so the shell can
    *  open a pocket bottom sheet instead. Reads documents; never writes. */
   getActionConfig(actor, ref) {
@@ -1305,11 +1505,19 @@ export const daggerheartAdapter = {
       thresholdsScale(actor),
       resourceBlock(actor, "stress", L("resource.stress"), "stress", "pips"),
       resourceBlock(actor, "hope", L("resource.hope"), "accent", "diamond"),
-      resourceBlock(actor, "armor", L("resource.armor"), "armor", "pips"),
-      { kind: "heading", label: L("heading.traits") },
-      traitsGrid(actor),
-      restButtons()
+      // Armor only when worn armor grants slots (matches the system sidebar's gate).
+      actor.system?.armorScore?.max > 0 ? resourceBlock(actor, "armor", L("resource.armor"), "armor", "pips") : null,
+      ...extraResourceBlocks(actor)
     ].filter(Boolean);
+
+    // Item-level resources (Seraph Prayer Dice, class counters): their own section so
+    // they're seen and rolled here, not just on the desktop sheet.
+    const itemRes = itemResourceBlocks(actor);
+    if (itemRes.length) vitals.push({ kind: "heading", label: L("heading.resources") }, ...itemRes);
+
+    vitals.push({ kind: "heading", label: L("heading.traits") }, traitsGrid(actor));
+    const rest = restButtons();
+    if (rest) vitals.push(rest);
 
     const loadout = loadoutTab(actor);
 
@@ -1359,6 +1567,12 @@ export const daggerheartAdapter = {
         return intent.picks ? applyRest(actor, intent.key, intent.picks) : openRest(actor, intent.key);
       case "deathMove":
         return openDeathMove(actor);
+      case "rollResourceDice":
+        return rerollItemDice(actor, intent.itemId);
+      case "toggleResourceDie":
+        return toggleItemDie(actor, intent.itemId, intent.key);
+      case "adjustItemResource":
+        return adjustItemResource(actor, intent.itemId, intent.delta);
       case "adjustResource":
         return adjustResource(actor, intent.key, intent.delta);
       case "setResource":

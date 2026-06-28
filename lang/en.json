@@ -12,6 +12,7 @@
   "MOBILE_SHEET.action.equip": "Equip / Unequip",
   "MOBILE_SHEET.action.vault": "Move to vault / loadout",
   "MOBILE_SHEET.action.chat": "Post to chat",
+  "MOBILE_SHEET.action.roll": "Roll",
   "MOBILE_SHEET.action.rest": "Rest",
   "MOBILE_SHEET.action.choose": "Choose an action",
 
@@ -50,6 +51,29 @@
   "MOBILE_SHEET.dice.empty": "Tap dice to build your roll",
   "MOBILE_SHEET.dice.modifier": "Modifier",
   "MOBILE_SHEET.dice.roll": "Roll",
+
+  "MOBILE_SHEET.mode.sheet": "Sheet",
+  "MOBILE_SHEET.mode.chat": "Chat",
+  "MOBILE_SHEET.mode.journal": "Journal",
+
+  "MOBILE_SHEET.chat.placeholder": "Message the party…",
+  "MOBILE_SHEET.chat.send": "Send",
+  "MOBILE_SHEET.chat.empty": "No messages yet.",
+  "MOBILE_SHEET.chat.whisper": "Whisper",
+  "MOBILE_SHEET.chat.dmg": "dmg",
+
+  "MOBILE_SHEET.journal.search": "Search journal…",
+  "MOBILE_SHEET.journal.empty": "No entries match your search.",
+  "MOBILE_SHEET.journal.emptyEntry": "This entry has no readable pages.",
+  "MOBILE_SHEET.journal.allEntries": "All Entries",
+  "MOBILE_SHEET.journal.untitled": "Untitled Entry",
+  "MOBILE_SHEET.journal.now": "just now",
+  "MOBILE_SHEET.journal.page": "Page {n}",
+  "MOBILE_SHEET.journal.byline": "{cat} · {n} pages",
+  "MOBILE_SHEET.journal.cat.text": "Note",
+  "MOBILE_SHEET.journal.cat.image": "Handout",
+  "MOBILE_SHEET.journal.cat.pdf": "Document",
+  "MOBILE_SHEET.journal.cat.video": "Video",
 
   "MOBILE_SHEET.settings.activation.name": "Activation",
   "MOBILE_SHEET.settings.activation.hint": "When to auto-open the mobile sheet on this device. Reload after changing.",
@@ -102,6 +126,7 @@
   "MOBILE_SHEET.daggerheart.heading.background": "Background",
   "MOBILE_SHEET.daggerheart.heading.connections": "Connections",
   "MOBILE_SHEET.daggerheart.heading.thresholds": "Damage Thresholds",
+  "MOBILE_SHEET.daggerheart.heading.resources": "Resources",
 
   "MOBILE_SHEET.daggerheart.threshold.minor": "Minor",
   "MOBILE_SHEET.daggerheart.threshold.major": "Major",

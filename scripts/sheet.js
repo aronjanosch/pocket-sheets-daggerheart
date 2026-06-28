@@ -19,7 +19,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
 /** Block kinds the shell knows how to render → their partial file names. */
-const KNOWN_KINDS = new Set(["resource", "statGrid", "tags", "actionList", "info", "heading", "buttons", "scale"]);
+const KNOWN_KINDS = new Set(["resource", "itemResource", "statGrid", "tags", "actionList", "info", "heading", "buttons", "scale"]);
 
 /** Resource tones map to a shell-owned role color class (theming stays in shell). */
 const TONE_CLASS = {
@@ -54,6 +54,19 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   #rollOptions = null;
   /** Last roll's normalized result, kept so the banner survives re-renders. */
   #lastRoll = null;
+  /** Top-level mode: the sheet itself, the table chat, or the journal. Shell-local. */
+  #activeMode = "sheet";
+  /** Journal browse state (read-only): which entry is open, which page, the search query. */
+  #journalEntryId = null;
+  #journalPage = 0;
+  #journalQuery = "";
+  /** Chat "unread" watermark: messages newer than this count toward the badge while the
+   *  player is on another mode. Set to "now" at open and whenever Chat is viewed. */
+  #unreadFrom = Date.now();
+  /** Compose-bar draft + focus, preserved across the live re-renders chat triggers (a
+   *  teammate's incoming message must not wipe a half-typed reply). */
+  #chatDraft = "";
+  #chatHadFocus = false;
 
   static DEFAULT_OPTIONS = {
     classes: ["pocket-sheets-daggerheart", "ms-sheet"],
@@ -70,18 +83,31 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       rest: PocketSheet.#onRest,
       deathMove: PocketSheet.#onDeathMove,
       adjustResource: PocketSheet.#onAdjustResource,
+      rollResourceDice: PocketSheet.#onRollResourceDice,
+      toggleResourceDie: PocketSheet.#onToggleResourceDie,
+      adjustItemResource: PocketSheet.#onAdjustItemResource,
       toggleTag: PocketSheet.#onToggleTag,
       toggleItem: PocketSheet.#onToggleItem,
       primary: PocketSheet.#onPrimary,
       openDice: PocketSheet.#onOpenDice,
       selectTab: PocketSheet.#onSelectTab,
       selectStat: PocketSheet.#onSelectStat,
+      selectMode: PocketSheet.#onSelectMode,
+      openJournalEntry: PocketSheet.#onOpenJournalEntry,
+      journalBack: PocketSheet.#onJournalBack,
+      journalPage: PocketSheet.#onJournalPage,
+      sendChat: PocketSheet.#onSendChat,
       switchActor: PocketSheet.#onSwitchActor
     }
   };
 
   static PARTS = {
-    body: { template: `modules/${MODULE_ID}/templates/sheet.hbs` }
+    body: {
+      template: `modules/${MODULE_ID}/templates/sheet.hbs`,
+      // Preserve scroll position of the body across re-renders (e.g. selecting a
+      // trait for the duality roll must not jump the sheet back to the top).
+      scrollable: [".ms-body"]
+    }
   };
 
   // --- render ---------------------------------------------------------------
@@ -130,6 +156,13 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const primary = this.#primary(vm.primary, active.blocks ?? []);
     this.#rollOptions = vm.primary?.rollOptions ?? null;
 
+    // Top-level mode (Sheet / Chat / Journal). Sheet is the view model above; Chat and
+    // Journal are core-Foundry, shell-owned screens built here (no adapter, no actor.system).
+    const mode = this.#activeMode;
+    const isChatMode = mode === "chat";
+    const isJournalMode = mode === "journal";
+    const isSheetMode = !isChatMode && !isJournalMode;
+
     return {
       ...base,
       state: "ok",
@@ -141,8 +174,222 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       topStats: (vm.topStats ?? []).map((s) => ({ ...s, value: String(s.value) })),
       tabs: tabs.map((t) => ({ id: t.id, label: t.label, active: t.id === active.id })),
       blocks,
-      primary
+      primary,
+      modes: this.#modes(isChatMode),
+      isSheetMode,
+      isChatMode,
+      isJournalMode,
+      chatPartial: `modules/${MODULE_ID}/templates/chat.hbs`,
+      journalPartial: `modules/${MODULE_ID}/templates/journal.hbs`,
+      chat: isChatMode ? await this.#chatContext() : null,
+      journal: isJournalMode ? await this.#journalContext() : null
     };
+  }
+
+  /** The three top-level modes for the switcher, with an unread badge on Chat. */
+  #modes(isChatMode) {
+    const L = (k) => game.i18n.localize(`MOBILE_SHEET.mode.${k}`);
+    const unread = isChatMode ? 0 : this.#unreadCount();
+    return [
+      { id: "sheet", label: L("sheet"), active: this.#activeMode === "sheet" },
+      { id: "chat", label: L("chat"), active: isChatMode, badgeSlot: true, badge: this.#badgeText(unread) },
+      { id: "journal", label: L("journal"), active: this.#activeMode === "journal" }
+    ];
+  }
+
+  #badgeText(n) {
+    return n > 0 ? (n > 99 ? "99+" : String(n)) : "";
+  }
+
+  /** Update the chat unread badge in place — used when chat changes while NOT in chat mode,
+   *  so a table-wide message never forces a full re-render (which would wipe an open bottom
+   *  sheet). The badge slot is always in the DOM, just hidden when the count is zero. */
+  #paintBadge() {
+    const el = this.element?.querySelector('.ms-mode[data-mode="chat"] .ms-mode-badge');
+    if (!el) return;
+    const text = this.#badgeText(this.#unreadCount());
+    el.textContent = text;
+    el.classList.toggle("ms-mode-badge-hidden", !text);
+  }
+
+  /** Count of visible messages newer than the unread watermark. */
+  #unreadCount() {
+    const msgs = game.messages?.contents ?? [];
+    let n = 0;
+    for (const m of msgs) {
+      try { if (m.visible && (m.timestamp ?? 0) > this.#unreadFrom) n++; } catch (_) {}
+    }
+    return n;
+  }
+
+  // --- chat mode (core Foundry; no actor.system) ----------------------------
+
+  /**
+   * Build the Chat screen from the core message log. The shell owns every generic part
+   * (plain bubbles, whispers, author avatars/colors, timestamps); the one system-specific
+   * piece — turning a roll into a compact Hope/Fear card — is delegated to the adapter's
+   * optional `getChatCard`. Messages it doesn't recognize fall back to their own rendered
+   * content HTML (already core-sanitized). Reads core collections only.
+   */
+  async #chatContext() {
+    const adapter = resolve(game.system.id);
+    const msgs = (game.messages?.contents ?? []).filter((m) => {
+      try { return m.visible; } catch (_) { return false; }
+    });
+    const messages = msgs.map((m) => this.#chatRow(m, adapter));
+    return { messages, empty: messages.length === 0 };
+  }
+
+  /** One chat message → a normalized row (roll card / whisper / plain bubble). */
+  #chatRow(m, adapter) {
+    const author = m.alias || m.author?.name || "";
+    const base = {
+      author,
+      color: this.#userColor(m.author),
+      time: this.#formatTime(m.timestamp),
+      initials: this.#initials(author),
+      isSelf: m.author?.id === game.user?.id
+    };
+
+    let card = null;
+    try { card = adapter?.getChatCard?.(m) ?? null; } catch (_) { card = null; }
+    if (card) {
+      return {
+        ...base,
+        isRoll: true,
+        rollOutcome: card.outcome ?? "flat",
+        outcome: card.label ?? "",
+        total: String(card.total ?? ""),
+        action: card.action ?? "",
+        hasAction: !!card.action,
+        hasHope: card.hope != null,
+        hope: card.hope,
+        hasFear: card.fear != null,
+        fear: card.fear,
+        hasAdv: !!card.adv,
+        advValue: card.adv?.value,
+        advIsAdv: card.adv?.kind === "adv",
+        hasDamage: !!card.damage,
+        dmgLabel: card.damage?.label ?? "",
+        dmgFormula: card.damage?.formula ?? "",
+        dmgTotal: card.damage?.total != null ? String(card.damage.total) : ""
+      };
+    }
+
+    const isWhisper = Array.isArray(m.whisper) && m.whisper.length > 0;
+    if (isWhisper) {
+      return { ...base, isWhisper: true, whisperLabel: game.i18n.localize("MOBILE_SHEET.chat.whisper"), content: m.content ?? "" };
+    }
+    return { ...base, isMsg: true, content: m.content ?? "" };
+  }
+
+  // --- journal mode (core Foundry; read-only) -------------------------------
+
+  /** Build the Journal screen: a searchable entry list, or the reader when one is open. */
+  async #journalContext() {
+    if (this.#journalEntryId) {
+      const entry = game.journal?.get(this.#journalEntryId);
+      if (entry?.visible) return { isReading: true, reader: await this.#journalReader(entry) };
+      this.#journalEntryId = null; // stale / no longer visible → back to the list
+    }
+    // The full visible list ships to the client; the search box filters it live in JS
+    // (see #wireJournal) so typing never re-renders and never loses input focus.
+    const entries = (game.journal?.contents ?? [])
+      .filter((e) => { try { return e.visible; } catch (_) { return false; } })
+      .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))
+      .map((e) => {
+        const cat = this.#journalCategory(e);
+        const title = e.name || game.i18n.localize("MOBILE_SHEET.journal.untitled");
+        return {
+          id: e.id,
+          title,
+          search: title.toLowerCase(),
+          cat: cat.label,
+          catGlyph: cat.glyph,
+          meta: this.#relativeTime(e._stats?.modifiedTime)
+        };
+      });
+    return { isList: true, query: this.#journalQuery, entries, empty: entries.length === 0 };
+  }
+
+  /** Reader view for one entry: page tabs + the active page (enriched text or image). */
+  async #journalReader(entry) {
+    const pages = (entry.pages?.contents ?? [])
+      .filter((p) => { try { return p.visible !== false; } catch (_) { return true; } })
+      .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+    const idx = Math.max(0, Math.min(this.#journalPage, pages.length - 1));
+    const page = pages[idx];
+    const cat = this.#journalCategory(entry);
+
+    const reader = {
+      title: entry.name || game.i18n.localize("MOBILE_SHEET.journal.untitled"),
+      cat: cat.label,
+      byline: game.i18n.format("MOBILE_SHEET.journal.byline", { cat: cat.label, n: pages.length }),
+      hasPages: pages.length > 1,
+      pageTabs: pages.map((p, i) => ({
+        title: p.name || game.i18n.format("MOBILE_SHEET.journal.page", { n: i + 1 }),
+        page: String(i),
+        active: i === idx
+      }))
+    };
+    if (!page) { reader.empty = true; return reader; }
+    if (page.type === "image" && page.src) {
+      reader.isImage = true;
+      reader.src = page.src;
+      reader.caption = page.image?.caption ?? "";
+    } else {
+      reader.isText = true;
+      reader.html = await this.#enrich(page.text?.content ?? "", entry.uuid);
+    }
+    return reader;
+  }
+
+  /** A display category for a journal entry: its folder, else its first page's type. */
+  #journalCategory(entry) {
+    const folder = entry.folder?.name;
+    if (folder) return { label: folder, glyph: "◈" };
+    const t = entry.pages?.contents?.[0]?.type ?? "text";
+    const glyphs = { text: "✦", image: "🖼", pdf: "▦", video: "▷" };
+    const label = game.i18n.localize(`MOBILE_SHEET.journal.cat.${t}`);
+    return { label: label.startsWith("MOBILE_SHEET") ? game.i18n.localize("MOBILE_SHEET.journal.cat.text") : label, glyph: glyphs[t] ?? "✦" };
+  }
+
+  // --- shared chat/journal formatting ---------------------------------------
+
+  #initials(name) {
+    const parts = String(name ?? "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "?";
+    return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
+  }
+
+  #userColor(user) {
+    try {
+      const c = user?.color;
+      if (!c) return "var(--ms-accent)";
+      return typeof c === "string" ? c : (c.css ?? c.toString?.() ?? "var(--ms-accent)");
+    } catch (_) {
+      return "var(--ms-accent)";
+    }
+  }
+
+  #formatTime(ts) {
+    try {
+      return new Date(ts ?? Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    } catch (_) {
+      return "";
+    }
+  }
+
+  /** Coarse relative time ("3m", "2h", "5d", "2w") for journal list meta. */
+  #relativeTime(ms) {
+    if (!ms) return "";
+    const sec = Math.max(0, Math.round((Date.now() - ms) / 1000));
+    if (sec < 60) return game.i18n.localize("MOBILE_SHEET.journal.now");
+    const min = Math.round(sec / 60); if (min < 60) return `${min}m`;
+    const hr = Math.round(min / 60); if (hr < 24) return `${hr}h`;
+    const d = Math.round(hr / 24); if (d < 7) return `${d}d`;
+    const w = Math.round(d / 7); if (w < 5) return `${w}w`;
+    try { return new Date(ms).toLocaleDateString(); } catch (_) { return ""; }
   }
 
   /** Count of owned actors the active adapter supports — drives the in-sheet
@@ -196,6 +443,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const partial = `modules/${MODULE_ID}/templates/blocks/${b.kind}.hbs`;
     switch (b.kind) {
       case "resource": return { ...this.#resource(b), partial };
+      case "itemResource": return { ...this.#itemResource(b), partial };
       case "statGrid": return { ...this.#statGrid(b), partial };
       case "tags": return { ...this.#tags(b), partial };
       case "actionList": return { ...this.#actionList(b), partial };
@@ -240,6 +488,38 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   #pips(value, max) {
     const out = [];
     for (let i = 0; i < (max ?? 0); i++) out.push({ filled: i < value, thumb: value > 0 && i === value - 1 });
+    return out;
+  }
+
+  /**
+   * An item-owned resource (Daggerheart's Seraph Prayer Dice, escalating dice, class
+   * counters). Three variants: a dice pool (tap a die to spend it, a button to reroll the
+   * pool), an escalating single die, or a plain counter — the latter two a ± stepper.
+   * Generic: the shell reads only the normalized shape and fires itemId-scoped intents.
+   */
+  #itemResource(b) {
+    const toneClass = TONE_CLASS[b.tone] ?? TONE_CLASS.accent;
+    const out = {
+      kind: "itemResource",
+      itemId: b.itemId,
+      label: b.label,
+      toneClass,
+      isDice: b.variant === "dice",
+      img: b.img,
+      hasImg: !!b.img
+    };
+    if (b.variant === "dice") {
+      out.dice = (b.dice ?? []).map((d) => ({
+        index: String(d.index),
+        label: d.value != null ? String(d.value) : "?",
+        unrolled: d.value == null,
+        used: !!d.used
+      }));
+    } else {
+      out.value = String(b.value ?? 0);
+      out.hasMax = typeof b.max === "number";
+      out.max = out.hasMax ? String(b.max) : "";
+    }
     return out;
   }
 
@@ -495,6 +775,18 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     });
   }
 
+  static #onRollResourceDice(event, target) {
+    return this.#dispatch({ type: "rollResourceDice", itemId: target.dataset.itemId, event });
+  }
+
+  static #onToggleResourceDie(event, target) {
+    return this.#dispatch({ type: "toggleResourceDie", itemId: target.dataset.itemId, key: target.dataset.key, event });
+  }
+
+  static #onAdjustItemResource(event, target) {
+    return this.#dispatch({ type: "adjustItemResource", itemId: target.dataset.itemId, delta: Number(target.dataset.delta) || 0, event });
+  }
+
   static #onToggleTag(event, target) {
     return this.#dispatch({ type: "toggleTag", key: target.dataset.key, event });
   }
@@ -523,6 +815,67 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   static #onSelectStat(event, target) {
     this.#activeStatKey = target.dataset.key;
     this.render();
+  }
+
+  /** Switch the top-level mode (Sheet / Chat / Journal). Opening Chat clears unread. */
+  static #onSelectMode(event, target) {
+    const mode = target.dataset.mode;
+    if (mode === this.#activeMode) return;
+    this.#activeMode = mode;
+    if (mode === "chat") this.#unreadFrom = Date.now();
+    this.render();
+  }
+
+  static #onOpenJournalEntry(event, target) {
+    this.#journalEntryId = target.dataset.id;
+    this.#journalPage = 0;
+    this.render();
+  }
+
+  static #onJournalBack() {
+    this.#journalEntryId = null;
+    this.#journalPage = 0;
+    this.render();
+  }
+
+  static #onJournalPage(event, target) {
+    this.#journalPage = Number(target.dataset.page) || 0;
+    this.render();
+  }
+
+  static #onSendChat() {
+    return this.#sendChat();
+  }
+
+  /**
+   * Send the compose-bar text to the table chat. Routed through Foundry's own chat
+   * processor so slash commands (/r, /w, /em, …) and plain messages all behave exactly
+   * like the desktop chat input. Plain party chat is core, not a system mechanic, so the
+   * shell posts it directly (the adapter is only consulted for *dice* math elsewhere).
+   */
+  async #sendChat() {
+    const input = this.element?.querySelector(".ms-compose-input");
+    const text = (input?.value ?? "").trim();
+    if (!text) return;
+    this.#chatDraft = "";
+    if (input) input.value = "";
+    try {
+      // Slash commands (/r, /w, /em, …) go through Foundry's own chat processor so they
+      // behave exactly like the desktop input. processMessage derives its own speaker, so
+      // plain party chat is posted directly with the *open* actor as the speaker (which is
+      // what the player expects when several owned characters share one device).
+      if (text.startsWith("/")) {
+        await ui.chat.processMessage(text);
+      } else {
+        await ChatMessage.implementation.create({
+          content: text,
+          speaker: ChatMessage.implementation.getSpeaker({ actor: this.actor })
+        });
+      }
+    } catch (err) {
+      console.error(`${MODULE_ID} | chat send failed`, err);
+      ui.notifications?.error(game.i18n.localize("MOBILE_SHEET.error.actionFailed"));
+    }
   }
 
   /** Open the owned-actor picker. Dynamic import avoids a load-time cycle with
@@ -557,7 +910,53 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
 
     this.#wireResourceSliders(root);
+    this.#wireChat(root);
+    this.#wireJournal(root);
     this.#renderBanner(); // re-attach a live roll banner after a re-render
+  }
+
+  /** Compose-bar wiring + keep the message list pinned to the newest message. */
+  #wireChat(root) {
+    const input = root.querySelector(".ms-compose-input");
+    if (!input) return; // not in chat mode
+    this.#unreadFrom = Date.now(); // everything currently shown counts as read
+
+    input.value = this.#chatDraft; // survive the re-render a new message triggers
+    input.addEventListener("input", () => { this.#chatDraft = input.value; });
+    input.addEventListener("focus", () => { this.#chatHadFocus = true; });
+    input.addEventListener("blur", () => { this.#chatHadFocus = false; });
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); this.#sendChat(); }
+    });
+    if (this.#chatHadFocus) {
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length); // caret to end
+    }
+
+    // Pin to the bottom so the latest message is in view (chat reads newest-last). Deferred
+    // past ApplicationV2's own scroll-position restore (which targets .ms-body) so it wins.
+    const body = root.querySelector(".ms-chat-scroll");
+    if (body) requestAnimationFrame(() => { body.scrollTop = body.scrollHeight; });
+  }
+
+  /** Live, focus-preserving journal search: filter the rendered list in place. */
+  #wireJournal(root) {
+    const search = root.querySelector(".ms-jrnl-search-input");
+    if (!search) return;
+    const empty = root.querySelector(".ms-jrnl-empty");
+    const rows = [...root.querySelectorAll(".ms-jrnl-entry")];
+    const apply = () => {
+      const q = (this.#journalQuery = search.value).trim().toLowerCase();
+      let shown = 0;
+      for (const r of rows) {
+        const hit = !q || (r.dataset.search ?? "").includes(q);
+        r.style.display = hit ? "" : "none";
+        if (hit) shown++;
+      }
+      if (empty) empty.style.display = shown === 0 ? "" : "none";
+    };
+    search.addEventListener("input", apply);
+    apply();
   }
 
   /**
@@ -1380,6 +1779,21 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const rerenderIfMine = (item) => { if (mine(item)) this.render(); };
     for (const hook of ["createItem", "updateItem", "deleteItem"]) {
       this.#hookIds[hook] = Hooks.on(hook, rerenderIfMine);
+    }
+
+    // Chat + journal are core-Foundry collections the shell mirrors. Only full-render for a
+    // mode while it is the one on screen — a table-wide chat message must NOT re-render the
+    // sheet (it would wipe an open bottom sheet); off-screen it just repaints the unread badge.
+    const onChat = () => { if (this.#activeMode === "chat") this.render(); else this.#paintBadge(); };
+    const onJournal = () => { if (this.#activeMode === "journal") this.render(); };
+    for (const hook of ["createChatMessage", "updateChatMessage", "deleteChatMessage"]) {
+      this.#hookIds[hook] = Hooks.on(hook, onChat);
+    }
+    for (const hook of [
+      "createJournalEntry", "updateJournalEntry", "deleteJournalEntry",
+      "createJournalEntryPage", "updateJournalEntryPage", "deleteJournalEntryPage"
+    ]) {
+      this.#hookIds[hook] = Hooks.on(hook, onJournal);
     }
   }
 
