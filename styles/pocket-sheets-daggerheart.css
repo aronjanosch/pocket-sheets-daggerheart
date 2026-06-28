@@ -2233,10 +2233,14 @@ body.pocket-sheets-daggerheart-only .ms-fab {
 .ms-action-res .ms-dice-mod-btn { width: 30px; height: 30px; border-radius: 8px; font-size: 16px; }
 .ms-action-res .ms-itemres-val { min-width: 2.2em; font-size: 13px; }
 
-/* Journal list row: stop serif descenders clipping, keep meta tidy in the narrow rail. */
-.ms-jrnl-entry { gap: 11px; padding: 10px 12px; }
-.ms-jrnl-entry-meta { flex-wrap: wrap; gap: 6px; margin-bottom: 3px; }
-.ms-jrnl-title { line-height: 1.3; padding-bottom: 1px; }
+/* Journal list row: generous inner padding + gap-based vertical rhythm so the title
+   never overlaps the meta line and nothing touches the rounded card edge. overflow:hidden
+   clips any spill to the border; the text column gets its own min-width:0 to ellipsize. */
+.ms-jrnl-entry { gap: 12px; padding: 13px 15px; overflow: hidden; }
+.ms-jrnl-entry-text { gap: 5px; min-width: 0; overflow: hidden; }
+.ms-jrnl-entry-meta { flex-wrap: wrap; gap: 6px; margin-bottom: 0; min-width: 0; }
+.ms-jrnl-time { white-space: nowrap; }
+.ms-jrnl-title { line-height: 1.3; padding-bottom: 2px; max-width: 100%; }
 .ms-jrnl-chev { flex: 0 0 auto; align-self: center; color: var(--ms-muted); font-size: 16px; }
 
 /* --- chat: tap a roll card to expand its full Foundry breakdown ------------- */
