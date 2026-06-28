@@ -28,6 +28,7 @@
   "MOBILE_SHEET.roll.disadvantage": "Disadvantage",
   "MOBILE_SHEET.roll.difficulty": "Difficulty",
   "MOBILE_SHEET.roll.bonus": "Situational Bonus",
+  "MOBILE_SHEET.roll.bonusPlaceholder": "e.g. 1d6 + 2",
   "MOBILE_SHEET.roll.experiences": "Experiences",
   "MOBILE_SHEET.roll.bonusEffects": "Bonus Effects",
   "MOBILE_SHEET.roll.reaction": "Reaction Roll",

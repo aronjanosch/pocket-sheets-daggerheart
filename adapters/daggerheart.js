@@ -577,11 +577,9 @@ async function usePocketAction(actor, action, intent) {
     }
     if (intent.reaction) config.actionType = "reaction";
 
-    // Situational bonus → the system's free-text extra roll formula (added to terms).
-    const bonus = Number(intent.bonus);
-    if (Number.isFinite(bonus) && bonus !== 0) {
-      config.extraFormula = bonus > 0 ? String(bonus) : `(${bonus})`;
-    }
+    // Situational bonus → the system's free-text extra roll formula (e.g. "1d6 + 2").
+    const bonus = typeof intent.bonus === "string" ? intent.bonus.trim() : "";
+    if (bonus) config.extraFormula = bonus;
 
     if (exps.length) {
       config.experiences = [...(config.experiences ?? []), ...exps];
@@ -697,11 +695,9 @@ async function rollTraitDirect(actor, intent) {
     }));
   }
 
-  // Situational bonus → the system's free-text extra roll formula (added to terms).
-  const bonus = Number(intent.bonus);
-  if (Number.isFinite(bonus) && bonus !== 0) {
-    options.extraFormula = bonus > 0 ? String(bonus) : `(${bonus})`;
-  }
+  // Situational bonus → the system's free-text extra roll formula (e.g. "1d6 + 2").
+  const bonus = typeof intent.bonus === "string" ? intent.bonus.trim() : "";
+  if (bonus) options.extraFormula = bonus;
 
   // Reaction roll → no Fear generated (DualityRoll.addDualityResourceUpdates skips it).
   if (intent.reaction) options.actionType = "reaction";

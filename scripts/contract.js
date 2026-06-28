@@ -71,7 +71,7 @@
  * @property {"advantage"|"neutral"|"disadvantage"} [advantage] Roll-sheet advantage choice (rollTrait / useItem roll action).
  * @property {number} [difficulty]              Optional roll difficulty from the roll sheet (rollTrait).
  * @property {string[]} [experiences]           Experience ids to apply to the roll (rollTrait / useItem); each spends 1 hope.
- * @property {number} [bonus]                   Flat situational bonus added to the roll (rollTrait).
+ * @property {string} [bonus]                   Free-text situational-bonus formula added to the roll, e.g. "1d6 + 2" (rollTrait / useItem).
  * @property {boolean} [reaction]               Roll as a reaction — no Fear generated (rollTrait / useItem roll action).
  * @property {string[]} [bonusOff]              Bonus-effect ids the player opted out of for this roll (rollTrait / useItem).
  * @property {boolean} [spend]                  Mark a useItem as a non-roll resource spend (suppresses the spend / action-picker dialog).

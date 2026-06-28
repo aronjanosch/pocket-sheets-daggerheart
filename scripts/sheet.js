@@ -758,11 +758,9 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const bonusRow = opts.bonus
       ? `<div class="ms-roll-section ms-roll-bonus-row">
            <span class="ms-roll-section-label">${L("bonus")}</span>
-           <div class="ms-roll-bonus">
-             <button type="button" class="ms-dice-mod-btn" data-bstep="-1">−</button>
-             <span class="ms-roll-bonus-val">+0</span>
-             <button type="button" class="ms-dice-mod-btn" data-bstep="1">+</button>
-           </div>
+           <input type="text" class="ms-roll-bonus-input" inputmode="text"
+                  autocapitalize="off" autocomplete="off" spellcheck="false"
+                  placeholder="${L("bonusPlaceholder")}" />
          </div>`
       : "";
 
@@ -836,15 +834,9 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       })
     );
 
-    // Situational bonus stepper (flat ±, clamped like the dice roller's modifier).
-    let bonus = 0;
-    const bonusEl = wrap.querySelector(".ms-roll-bonus-val");
-    wrap.querySelectorAll("[data-bstep]").forEach((b) =>
-      b.addEventListener("click", () => {
-        bonus = Math.max(-20, Math.min(20, bonus + Number(b.dataset.bstep)));
-        if (bonusEl) bonusEl.textContent = sign(bonus);
-      })
-    );
+    // Situational bonus → a free-text formula the player types (e.g. "1d6 + 2"),
+    // passed verbatim to the system's extraFormula like its own roll dialog.
+    const bonusEl = wrap.querySelector(".ms-roll-bonus-input");
 
     // Reaction toggle: a reaction roll generates no Fear (the adapter sets actionType).
     let reaction = false;
@@ -895,7 +887,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       close();
       onSubmit?.({
         advantage: adv,
-        bonus,
+        bonus: (bonusEl?.value ?? "").trim(),
         reaction,
         experiences: [...selected],
         bonusOff: [...off],

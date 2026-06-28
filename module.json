@@ -2,7 +2,7 @@
   "id": "pocket-sheet",
   "title": "Pocket Sheet",
   "description": "Mobile-friendly character sheets for in-person play. Players open their sheet on a phone or tablet while the GM drives one shared map.",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
