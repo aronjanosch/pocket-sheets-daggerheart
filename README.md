@@ -43,13 +43,19 @@ You can also switch on the fly:
 - **Leave** — tap the ⤢ button in the sheet's top corner → back to full Foundry.
 - **Return** — on a tablet/phone that left, a floating phone button appears → tap to go back in.
 
-Prefer a hotbar button? Create a **script macro** with this one line (works on any device):
+Prefer a hotbar button? The module ships a **Pocket Sheets — Macros** compendium with a
+**Toggle Pocket Mode** macro — open the Compendium Packs sidebar, drag it onto your hotbar,
+and tap it to switch this device in or out. (It calls the API below.)
+
+Scripting it yourself? The public API on any device:
 
 ```js
-game.modules.get("pocket-sheets-daggerheart").api.enterPocketMode();
+const api = game.modules.get("pocket-sheets-daggerheart").api;
+api.enterPocketMode(); // fullscreen sheet, map off
+api.exitPocketMode();  // full Foundry, map on
 ```
 
-`exitPocketMode()` is the reverse. Both flip this device's Pocket mode setting and reload.
+Both flip this device's Pocket mode setting and reload.
 
 ## Design principles
 

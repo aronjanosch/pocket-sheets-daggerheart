@@ -63,30 +63,43 @@ export async function exitPocketMode() {
   location.reload();
 }
 
-/** Seed a hotbar-ready "Toggle Pocket Mode" macro once per world (GM only). We ship no
- *  compendium — packing one is a build step (LevelDB), which this module forbids — so we
- *  create the document directly. The `macroSeeded` flag means a deleted macro stays deleted. */
+/** Seed the "Toggle Pocket Mode" macro into the module's compendium (GM only, once).
+ *  We ship no pre-packed LevelDB — packing one is a build step this module forbids — so
+ *  the `packs` entry in module.json makes Foundry auto-create an empty pack and we fill it
+ *  here. Idempotent: the pack index is the source of truth, so a deleted macro stays gone
+ *  only until the pack is empty again; an existing one is never duplicated. */
 async function seedToggleMacro() {
   if (!game.user.isGM) return;
-  if (game.settings.get(MODULE_ID, "macroSeeded")) return;
 
-  const command =
-    `const id = "${MODULE_ID}";\n` +
-    `const api = game.modules.get(id).api;\n` +
-    `// One device-local switch: leave pocket mode if on, enter it if off. Reloads.\n` +
-    `game.settings.get(id, "activation") === "never" ? api.enterPocketMode() : api.exitPocketMode();`;
+  const pack = game.packs?.get(`${MODULE_ID}.macros`);
+  if (!pack) return; // pack not declared / not ready
 
   try {
-    await Macro.create({
-      name: "Toggle Pocket Mode",
-      type: "script",
-      img: "icons/svg/cog.svg",
-      command,
-      flags: { [MODULE_ID]: { toggle: true } }
-    });
-    await game.settings.set(MODULE_ID, "macroSeeded", true);
+    const index = await pack.getIndex();
+    if (index.some((e) => e.name === "Toggle Pocket Mode")) return; // already seeded
+
+    const command =
+      `const id = "${MODULE_ID}";\n` +
+      `const api = game.modules.get(id).api;\n` +
+      `// One device-local switch: leave pocket mode if on, enter it if off. Reloads.\n` +
+      `game.settings.get(id, "activation") === "never" ? api.enterPocketMode() : api.exitPocketMode();`;
+
+    // Module packs ship locked; unlock to write, then relock so it reads as a
+    // distributed (read-only) compendium.
+    if (pack.locked) await pack.configure({ locked: false });
+    await Macro.create(
+      {
+        name: "Toggle Pocket Mode",
+        type: "script",
+        img: "icons/svg/cog.svg",
+        command,
+        flags: { [MODULE_ID]: { toggle: true } }
+      },
+      { pack: pack.collection }
+    );
+    await pack.configure({ locked: true });
   } catch (err) {
-    console.warn(`${MODULE_ID} | could not seed the Toggle Pocket Mode macro`, err);
+    console.warn(`${MODULE_ID} | could not seed the macro compendium`, err);
   }
 }
 
@@ -127,14 +140,6 @@ export function registerActivationSettings() {
     default: false
   });
 
-  // Internal: world-scoped, set once we've seeded the "Toggle Pocket Mode" macro,
-  // so a GM who deletes it doesn't get it recreated on every reload.
-  game.settings.register(MODULE_ID, "macroSeeded", {
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: false
-  });
 }
 
 // --- canvas mode -----------------------------------------------------------
