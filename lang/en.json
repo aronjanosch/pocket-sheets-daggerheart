@@ -15,6 +15,11 @@
   "MOBILE_SHEET.action.roll": "Roll",
   "MOBILE_SHEET.action.rest": "Rest",
   "MOBILE_SHEET.action.choose": "Choose an action",
+  "MOBILE_SHEET.action.delete": "Remove item",
+  "MOBILE_SHEET.action.addItem": "Add item",
+
+  "MOBILE_SHEET.confirm.deleteTitle": "Remove Item",
+  "MOBILE_SHEET.confirm.deleteBody": "Remove {name}?",
 
   "MOBILE_SHEET.stat.spellcast": "Spellcasting trait",
 

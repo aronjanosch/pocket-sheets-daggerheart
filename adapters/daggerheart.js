@@ -334,7 +334,7 @@ function weaponRow(w) {
   };
   if (damage) row.badge = String(damage);
   attachActions(row, w);
-  row.controls = [{ kind: "equip", active: !!w.system?.equipped }, ...chatControl(w)];
+  row.controls = [{ kind: "equip", active: !!w.system?.equipped }, ...chatControl(w), { kind: "delete" }];
   return row;
 }
 
@@ -343,7 +343,7 @@ function armorRow(a) {
   const row = { itemId: a.id, name: a.name, img: a.img, glyph: "🛡", use: false };
   if (score != null) row.badge = String(score);
   attachActions(row, a);
-  row.controls = [{ kind: "equip", active: !!a.system?.equipped }, ...chatControl(a)];
+  row.controls = [{ kind: "equip", active: !!a.system?.equipped }, ...chatControl(a), { kind: "delete" }];
   return row;
 }
 
@@ -351,13 +351,13 @@ function stuffRow(i) {
   const qty = num(i.system?.quantity);
   const row = {
     itemId: i.id, name: i.name, img: i.img, glyph: "◈",
-    sub: typeof qty === "number" && qty > 1 ? `×${qty}` : "",
+    sub: "",
+    hasQty: true, qty: qty ?? 0,
     // Tap opens the detail panel (like a feature); use/chat live in the panel + inline buttons.
     use: false
   };
   attachActions(row, i);
-  const controls = chatControl(i);
-  if (controls.length) row.controls = controls;
+  row.controls = [...chatControl(i), { kind: "delete" }];
   return row;
 }
 
@@ -485,9 +485,8 @@ function itemsTab(actor) {
   ];
   for (const [type, map] of sections) {
     const rows = itemRows(actor, [type], map);
-    if (!rows.length) continue;
-    blocks.push({ kind: "heading", label: typeLabel(type), count: rows.length });
-    blocks.push({ kind: "actionList", items: rows });
+    blocks.push({ kind: "heading", label: typeLabel(type), count: rows.length || null, addAction: "createItem", addItemType: type });
+    if (rows.length) blocks.push({ kind: "actionList", items: rows });
   }
   return blocks;
 }
@@ -1569,6 +1568,20 @@ export const daggerheartAdapter = {
         return writeResource(actor, intent.key, intent.value);
       case "toggleTag":
         return actor.toggleStatusEffect?.(intent.key);
+      case "deleteItem":
+        return actor.items?.get(intent.itemId)?.delete();
+      case "adjustItemQty": {
+        const qitem = actor.items?.get(intent.itemId);
+        if (!qitem) return;
+        const cur = num(qitem.system?.quantity) ?? 0;
+        return qitem.update({ "system.quantity": Math.max(0, cur + intent.delta) });
+      }
+      case "createItem": {
+        const typeName = game.i18n.localize(`TYPES.Item.${intent.itemType}`) || intent.itemType;
+        const created = await Item.create({ type: intent.itemType, name: typeName }, { parent: actor });
+        created?.sheet?.render(true);
+        return;
+      }
       default:
         return;
     }

@@ -265,6 +265,21 @@
   flex: 0 0 auto;
 }
 
+.ms-heading-add {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 1px solid var(--ms-line2);
+  background: var(--ms-surf2);
+  color: var(--ms-soft);
+  font-size: 11px;
+  cursor: pointer;
+}
+.ms-heading-add:active { transform: scale(0.94); color: var(--ms-accent); border-color: color-mix(in oklab, var(--ms-accent) 45%, transparent); }
+
 /* --- resource block ------------------------------------------------------- */
 
 .ms-resource { --tone: var(--ms-accent); }
@@ -674,6 +689,34 @@
 
 .ms-action-main.ms-action-static { cursor: default; }
 .ms-action-main:not(.ms-action-static):active { transform: scale(0.99); }
+
+/* Quantity stepper for consumables and loot */
+.ms-action-qty {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--ms-line2);
+}
+.ms-qty-btn {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: var(--ms-surf2);
+  border: 1px solid var(--ms-line2);
+  color: var(--ms-fg);
+  font: 700 16px var(--ms-mono);
+  cursor: pointer;
+}
+.ms-qty-btn:active { transform: scale(0.95); border-color: var(--ms-accent); }
+.ms-qty-val {
+  min-width: 2em;
+  text-align: center;
+  font: 600 15px var(--ms-mono);
+  color: var(--ms-fg);
+}
 
 /* Item controls: equip / vault / post-to-chat */
 .ms-action-controls {
@@ -1815,6 +1858,18 @@ body.pocket-sheets-daggerheart-only .ms-fab {
   font: 500 12px var(--ms-sans);
   color: var(--ms-muted);
 }
+
+/* Native Foundry chat message wrapper — message.getHTML() output injected here */
+.ms-native-msg { width: 100%; }
+.ms-native-msg .chat-message {
+  margin: 0;
+  border-radius: 10px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.ms-native-msg img { max-width: 100%; height: auto; }
+.ms-native-msg .message-delete { display: none; }
+.ms-native-msg .chat-message header.message-header { cursor: default; }
 
 .ms-chat-row { --avc: var(--ms-accent); }
 .ms-chat-msg,

@@ -1,65 +1,14 @@
-{{!-- Chat mode: the table message log, phone-native. Shell-built from core game.messages;
-      roll cards come from the adapter's getChatCard, everything else renders generically. --}}
+{{!-- Chat mode: the table message log. Each message is rendered via Foundry's own
+      message.getHTML() so system roll cards, item posts, and enriched content all
+      display identically to the normal sidebar — no custom parser needed. --}}
 <div class="ms-body ms-chat-scroll">
   {{#if chat.empty}}
     <div class="ms-chat-empty">{{localize "MOBILE_SHEET.chat.empty"}}</div>
   {{/if}}
 
   {{#each chat.messages}}
-    {{#if this.isRoll}}
-      <div class="ms-chat-row ms-chat-roll ms-roll-{{this.rollOutcome}}" style="--avc:{{this.color}}">
-        <div class="ms-chat-roll-head">
-          <span class="ms-chat-avatar">{{this.initials}}</span>
-          <span class="ms-chat-roll-who">
-            <span class="ms-chat-author">{{this.author}}</span>
-            {{#if this.hasAction}}<span class="ms-chat-action">{{this.action}}</span>{{else}}<span class="ms-chat-action ms-chat-action-roll"><i class="fa-solid fa-dice-d20"></i> {{localize "MOBILE_SHEET.chat.roll"}}</span>{{/if}}
-          </span>
-          <span class="ms-chat-time">{{this.time}}</span>
-        </div>
-        <div class="ms-chat-roll-body">
-          {{#if this.hasHope}}<span class="ms-roll-die ms-roll-die-hope">{{this.hope}}</span>{{/if}}
-          {{#if this.hasFear}}<span class="ms-roll-die ms-roll-die-fear">{{this.fear}}</span>{{/if}}
-          {{#if this.hasAdv}}<span class="ms-roll-die ms-roll-die-adv{{#unless this.advIsAdv}} ms-roll-die-dis{{/unless}}">{{this.advValue}}</span>{{/if}}
-          <span class="ms-roll-outcome">{{this.outcome}}</span>
-          <span class="ms-roll-total">{{this.total}}</span>
-        </div>
-        {{#if this.hasDamage}}
-          <div class="ms-roll-dmg">
-            <span class="ms-roll-dmg-label">⚔ {{this.dmgLabel}}</span>
-            <span class="ms-roll-dmg-spacer"></span>
-            {{#if this.dmgFormula}}<span class="ms-roll-dmg-formula">{{this.dmgFormula}}</span>{{/if}}
-            <span class="ms-roll-dmg-total">{{this.dmgTotal}}</span>
-            <span class="ms-roll-dmg-unit">{{localize "MOBILE_SHEET.chat.dmg"}}</span>
-          </div>
-        {{/if}}
-      </div>
-    {{/if}}
-
-    {{#if this.isWhisper}}
-      <div class="ms-chat-row ms-chat-whisper" style="--avc:{{this.color}}">
-        <span class="ms-chat-avatar">{{this.initials}}</span>
-        <div class="ms-chat-bubble">
-          <div class="ms-chat-meta">
-            <span class="ms-chat-author">{{this.author}}</span>
-            <span class="ms-chat-whisper-tag">{{this.whisperLabel}}</span>
-            <span class="ms-chat-time">{{this.time}}</span>
-          </div>
-          <div class="ms-chat-text">{{{this.content}}}</div>
-        </div>
-      </div>
-    {{/if}}
-
-    {{#if this.isMsg}}
-      <div class="ms-chat-row ms-chat-msg{{#if this.isSelf}} ms-chat-self{{/if}}" style="--avc:{{this.color}}">
-        <span class="ms-chat-avatar">{{this.initials}}</span>
-        <div class="ms-chat-bubble">
-          <div class="ms-chat-meta">
-            <span class="ms-chat-author">{{this.author}}</span>
-            <span class="ms-chat-time">{{this.time}}</span>
-          </div>
-          <div class="ms-chat-text">{{{this.content}}}</div>
-        </div>
-      </div>
+    {{#if this.nativeHtml}}
+      <div class="ms-native-msg">{{{this.nativeHtml}}}</div>
     {{/if}}
   {{/each}}
 </div>

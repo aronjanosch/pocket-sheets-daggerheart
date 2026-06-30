@@ -31,6 +31,14 @@
           </div>
         {{/if}}
 
+        {{#if this.hasQty}}
+          <div class="ms-action-qty">
+            <button type="button" class="ms-qty-btn" data-action="adjustItemQty" data-item-id="{{this.itemId}}" data-delta="-1">−</button>
+            <span class="ms-qty-val">{{this.qty}}</span>
+            <button type="button" class="ms-qty-btn" data-action="adjustItemQty" data-item-id="{{this.itemId}}" data-delta="1">+</button>
+          </div>
+        {{/if}}
+
         {{#if this.hasResource}}
           {{#with this.resource}}
           <div class="ms-action-res ms-itemres {{this.toneClass}}">

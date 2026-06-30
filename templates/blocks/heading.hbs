@@ -1,6 +1,7 @@
-{{!-- HeadingBlock: section label with an ornamental rule and optional count. --}}
+{{!-- HeadingBlock: section label with an ornamental rule, optional count, and optional add button. --}}
 <div class="ms-heading">
   <span class="ms-heading-label">{{label}}</span>
   <span class="ms-heading-rule"></span>
   {{#if hasCount}}<span class="ms-heading-count">{{count}}</span>{{/if}}
+  {{#if addAction}}<button type="button" class="ms-heading-add" data-action="{{addAction}}" data-item-type="{{addItemType}}" aria-label="{{localize "MOBILE_SHEET.action.addItem"}}"><i class="fa-solid fa-plus"></i></button>{{/if}}
 </div>

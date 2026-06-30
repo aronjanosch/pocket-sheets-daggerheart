@@ -41,7 +41,8 @@ const CONTROL_DEF = {
   equip: { action: "equip", icon: "fa-solid fa-shield-halved", labelKey: "MOBILE_SHEET.action.equip" },
   vault: { action: "vault", icon: "fa-solid fa-arrow-down", onIcon: "fa-solid fa-arrow-up", labelKey: "MOBILE_SHEET.action.vault" },
   chat: { action: "toChat", icon: "fa-regular fa-message", labelKey: "MOBILE_SHEET.action.chat" },
-  expChat: { action: "expChat", icon: "fa-regular fa-message", labelKey: "MOBILE_SHEET.action.chat" }
+  expChat: { action: "expChat", icon: "fa-regular fa-message", labelKey: "MOBILE_SHEET.action.chat" },
+  delete: { action: "deleteItem", icon: "fa-solid fa-trash-can", labelKey: "MOBILE_SHEET.action.delete" }
 };
 
 export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
@@ -90,6 +91,9 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       rollResourceDice: PocketSheet.#onRollResourceDice,
       toggleResourceDie: PocketSheet.#onToggleResourceDie,
       adjustItemResource: PocketSheet.#onAdjustItemResource,
+      adjustItemQty: PocketSheet.#onAdjustItemQty,
+      deleteItem: PocketSheet.#onDeleteItem,
+      createItem: PocketSheet.#onCreateItem,
       toggleTag: PocketSheet.#onToggleTag,
       toggleItem: PocketSheet.#onToggleItem,
       primary: PocketSheet.#onPrimary,
@@ -314,81 +318,22 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * content HTML (already core-sanitized). Reads core collections only.
    */
   async #chatContext() {
-    const adapter = resolve(game.system.id);
     const msgs = (game.messages?.contents ?? []).filter((m) => {
       try { return m.visible; } catch (_) { return false; }
     });
-    const messages = msgs.map((m) => this.#chatRow(m, adapter));
+    const messages = await Promise.all(msgs.map((m) => this.#chatRow(m)));
     return { messages, empty: messages.length === 0 };
   }
 
-  /** One chat message → a normalized row (roll card / whisper / plain bubble). */
-  #chatRow(m, adapter) {
-    const author = m.alias || m.author?.name || "";
-    const base = {
-      author,
-      color: this.#userColor(m.author),
-      time: this.#formatTime(m.timestamp),
-      initials: this.#initials(author),
-      isSelf: m.author?.id === game.user?.id
-    };
-
-    let card = null;
-    try { card = adapter?.getChatCard?.(m) ?? null; } catch (_) { card = null; }
-    if (card) {
-      return {
-        ...base,
-        isRoll: true,
-        rollOutcome: card.outcome ?? "flat",
-        outcome: card.label ?? "",
-        total: String(card.total ?? ""),
-        action: card.action ?? "",
-        hasAction: !!card.action,
-        hasHope: card.hope != null,
-        hope: card.hope,
-        hasFear: card.fear != null,
-        fear: card.fear,
-        hasAdv: !!card.adv,
-        advValue: card.adv?.value,
-        advIsAdv: card.adv?.kind === "adv",
-        hasDamage: !!card.damage,
-        dmgLabel: card.damage?.label ?? "",
-        dmgFormula: card.damage?.formula ?? "",
-        dmgTotal: card.damage?.total != null ? String(card.damage.total) : ""
-      };
+  /** One chat message → native Foundry-rendered HTML, injected as-is. */
+  async #chatRow(m) {
+    try {
+      const jq = await m.getHTML();
+      const el = jq instanceof jQuery ? jq[0] : jq;
+      return { nativeHtml: el?.outerHTML ?? "" };
+    } catch (_) {
+      return { nativeHtml: "" };
     }
-
-    const isWhisper = Array.isArray(m.whisper) && m.whisper.length > 0;
-    if (isWhisper) {
-      return { ...base, isWhisper: true, whisperLabel: game.i18n.localize("MOBILE_SHEET.chat.whisper"), content: m.content ?? "" };
-    }
-
-    // A roll the adapter didn't recognize as a system card (a /r, a damage roll, a plain
-    // d20) still gets a compact, expandable roll bubble — built generically from m.rolls.
-    const rolls = m.rolls ?? [];
-    if (rolls.length) {
-      const total = rolls.reduce((s, r) => s + (Number(r.total) || 0), 0);
-      const flavor = this.#stripHtml(m.flavor);
-      return {
-        ...base,
-        isRoll: true,
-        rollOutcome: "flat",
-        outcome: "",
-        total: String(total),
-        action: flavor,
-        hasAction: !!flavor,
-        hasHope: false, hasFear: false, hasAdv: false, hasDamage: false
-      };
-    }
-
-    return { ...base, isMsg: true, content: m.content ?? "" };
-  }
-
-  /** Plain text from possibly-HTML flavor (avoids dumping markup into the roll label). */
-  #stripHtml(html) {
-    const d = document.createElement("div");
-    d.innerHTML = html ?? "";
-    return (d.textContent || "").trim();
   }
 
   // --- journal mode (core Foundry; read-only) -------------------------------
@@ -464,30 +409,6 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   // --- shared chat/journal formatting ---------------------------------------
 
-  #initials(name) {
-    const parts = String(name ?? "").trim().split(/\s+/).filter(Boolean);
-    if (!parts.length) return "?";
-    return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
-  }
-
-  #userColor(user) {
-    try {
-      const c = user?.color;
-      if (!c) return "var(--ms-accent)";
-      return typeof c === "string" ? c : (c.css ?? c.toString?.() ?? "var(--ms-accent)");
-    } catch (_) {
-      return "var(--ms-accent)";
-    }
-  }
-
-  #formatTime(ts) {
-    try {
-      return new Date(ts ?? Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    } catch (_) {
-      return "";
-    }
-  }
-
   /** Coarse relative time ("3m", "2h", "5d", "2w") for journal list meta. */
   #relativeTime(ms) {
     if (!ms) return "";
@@ -556,7 +477,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       case "actionList": return { ...this.#actionList(b), partial };
       case "buttons": return { ...this.#buttons(b), partial };
       case "scale": return { ...this.#scale(b), partial };
-      case "heading": return { kind: b.kind, partial, label: b.label, count: b.count != null ? String(b.count) : "", hasCount: b.count != null };
+      case "heading": return { kind: b.kind, partial, label: b.label, count: b.count != null ? String(b.count) : "", hasCount: b.count != null, addAction: b.addAction ?? "", addItemType: b.addItemType ?? "" };
       case "info":
       default: return { kind: b.kind, partial, title: b.title, hasTitle: !!b.title, html: b.html ?? "", enrich: !!b.enrich, relativeToUuid: b.relativeToUuid };
     }
@@ -716,7 +637,9 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           hasActions: actions.length > 0,
           // An item's own resource (Prayer Dice, class counter) embedded on its card.
           resource: i.resource ? this.#itemResource(i.resource) : null,
-          hasResource: !!i.resource
+          hasResource: !!i.resource,
+          hasQty: !!i.hasQty,
+          qty: i.qty ?? 0
         };
       })
     };
@@ -901,6 +824,26 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   static #onToggleItem(event, target) {
     return this.#dispatch({ type: "toggleItem", itemId: target.dataset.itemId, event });
+  }
+
+  static async #onDeleteItem(event, target) {
+    const itemId = target.dataset.itemId;
+    const name = this.actor.items?.get(itemId)?.name ?? "";
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: game.i18n.localize("MOBILE_SHEET.confirm.deleteTitle") },
+      content: `<p>${game.i18n.format("MOBILE_SHEET.confirm.deleteBody", { name })}</p>`,
+      rejectClose: false
+    });
+    if (!confirmed) return;
+    return this.#dispatch({ type: "deleteItem", itemId, event });
+  }
+
+  static #onCreateItem(event, target) {
+    return this.#dispatch({ type: "createItem", itemType: target.dataset.itemType, event });
+  }
+
+  static #onAdjustItemQty(event, target) {
+    return this.#dispatch({ type: "adjustItemQty", itemId: target.dataset.itemId, delta: Number(target.dataset.delta) || 0, event });
   }
 
   static #onPrimary(event, target) {
