@@ -311,11 +311,10 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   // --- chat mode (core Foundry; no actor.system) ----------------------------
 
   /**
-   * Build the Chat screen from the core message log. The shell owns every generic part
-   * (plain bubbles, whispers, author avatars/colors, timestamps); the one system-specific
-   * piece — turning a roll into a compact Hope/Fear card — is delegated to the adapter's
-   * optional `getChatCard`. Messages it doesn't recognize fall back to their own rendered
-   * content HTML (already core-sanitized). Reads core collections only.
+   * Build the Chat screen from the core message log. Every message renders via the
+   * document's own native `getHTML()` (already core-sanitized), so the roll cards a
+   * system builds — Hope/Fear duality cards included — show up as-is with no
+   * system-specific adapter seam. Reads core collections only.
    */
   async #chatContext() {
     const msgs = (game.messages?.contents ?? []).filter((m) => {

@@ -150,6 +150,7 @@
 
   "MOBILE_SHEET.daggerheart.loadout.count": "{count} in loadout",
 
+  "MOBILE_SHEET.daggerheart.gold.coins": "Coins",
   "MOBILE_SHEET.daggerheart.gold.handfuls": "Handfuls",
   "MOBILE_SHEET.daggerheart.gold.bags": "Bags",
   "MOBILE_SHEET.daggerheart.gold.chests": "Chests",
@@ -172,6 +173,7 @@
   "MOBILE_SHEET.daggerheart.badge.damage": "Damage",
   "MOBILE_SHEET.daggerheart.badge.burden": "Burden",
   "MOBILE_SHEET.daggerheart.badge.score": "Score",
+  "MOBILE_SHEET.daggerheart.badge.marks": "Marks",
   "MOBILE_SHEET.daggerheart.badge.major": "Major",
   "MOBILE_SHEET.daggerheart.badge.severe": "Severe",
   "MOBILE_SHEET.daggerheart.badge.type": "Type",

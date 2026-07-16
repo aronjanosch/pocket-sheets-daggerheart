@@ -66,11 +66,63 @@ function parseItemFormula(formula, actor, item) {
     const isItemTarget = String(formula).toLowerCase().includes("item.@");
     const sliced = isItemTarget ? String(formula).replaceAll(/item\.@/gi, "@") : String(formula);
     const data = (isItemTarget ? item?.getRollData?.() : actor?.getRollData?.()) ?? {};
-    const n = Number(Roll.replaceFormulaData(sliced, data));
-    return Number.isFinite(n) ? n : null;
+    const replaced = Roll.replaceFormulaData(sliced, data);
+    const n = Number(replaced);
+    if (Number.isFinite(n)) return n;
+    const total = new Roll(replaced).evaluateSync({ strict: false }).total;
+    return Number.isFinite(total) ? total : null;
   } catch (_) {
     return null;
   }
+}
+
+/** Localize a system CONFIG key id, degrading to the raw id when the key is unknown
+ *  (a homebrew value or a version whose CONFIG doesn't define it). */
+function localizeConfigKey(key, id) {
+  if (!id) return "";
+  const has = typeof game.i18n.has === "function" ? game.i18n.has(key) : true;
+  return has ? game.i18n.localize(key) : String(id);
+}
+
+/** A weapon trait id ("agility") → its display name, per the system's CONFIG.Traits. */
+function traitLabel(id) {
+  return localizeConfigKey(`DAGGERHEART.CONFIG.Traits.${id}.name`, id);
+}
+
+/** A weapon range id ("melee") → its display name, per the system's CONFIG.Range. */
+function rangeLabel(id) {
+  return localizeConfigKey(`DAGGERHEART.CONFIG.Range.${id}.name`, id);
+}
+
+/** A weapon burden id ("oneHanded") → its display name, per the system's CONFIG.Burden. */
+function burdenLabel(id) {
+  return localizeConfigKey(`DAGGERHEART.CONFIG.Burden.${id}`, id);
+}
+
+/**
+ * A weapon's attack damage, 2.5.x shape: `system.attack.damage.parts` is an id-keyed
+ * collection of `DHDamageData` (see DamageField); pick the part applying to hitPoints
+ * (the system's own damage roll order), or the first, and read its formula off the
+ * embedded `DHActionDiceData` via its sync `getFormula()`. `@…` references are resolved
+ * for display against the actor's roll data ("@profd12" → "2d12"), the way the system's
+ * own label build does (weapon.mjs _getLabels). Falls back to the pre-2.x flat
+ * `system.damage` field. Null when neither shape is present.
+ */
+function weaponDamage(item) {
+  const sys = item?.system ?? {};
+  const parts = sys.attack?.damage?.parts;
+  const list = parts ? Object.values(parts) : [];
+  const part = list.find((p) => p?.applyTo === "hitPoints") ?? list[0];
+  let formula = typeof part?.value?.getFormula === "function" ? part.value.getFormula() : null;
+  if (formula) {
+    try { formula = Roll.replaceFormulaData(formula, item?.actor?.getRollData?.() ?? {}); } catch (_) {}
+    return { formula, types: part.type ? [...part.type] : [] };
+  }
+
+  const legacy = num(sys.damage) ?? sys.damage?.value;
+  if (legacy == null || legacy === "") return null;
+  const legacyType = sys.damageType ?? sys.damage?.type;
+  return { formula: String(legacy), types: legacyType ? [legacyType] : [] };
 }
 
 /** Faces count from a die-faces string ("d12" → 12), or null. */
@@ -256,14 +308,11 @@ function itemRows(actor, types, map) {
 /** A function on a document, regardless of own vs prototype. */
 const can = (doc, method) => typeof doc?.[method] === "function";
 
-/** Normalize an item's embedded actions (Collection | array) to a flat list. */
+/** Normalize an item's embedded actions (Collection | array) to a flat list — an alias
+ *  of the act half's `actionsOf` so both read the same `actionsList ?? actions` shape
+ *  (weapon.mjs prepends the attack action onto `actionsList`). */
 function actionList(item) {
-  const a = item?.system?.actions;
-  if (!a) return [];
-  if (Array.isArray(a)) return a;
-  if (typeof a.values === "function") return [...a.values()];
-  if (Array.isArray(a.contents)) return a.contents;
-  return [];
+  return actionsOf(item);
 }
 
 /** Inline buttons for an item's own actions (the "Mark a Stress" affordances). */
@@ -323,23 +372,24 @@ function loadoutTab(actor) {
 }
 
 function weaponRow(w) {
-  const trait = w.system?.trait ?? "";
-  const range = w.system?.range ?? "";
-  const damage = num(w.system?.damage) ?? w.system?.damage?.value ?? "";
+  const sys = w.system ?? {};
+  const trait = traitLabel(sys.attack?.roll?.trait ?? sys.trait);
+  const range = rangeLabel(sys.attack?.range ?? sys.range);
+  const damage = weaponDamage(w);
   const row = {
     itemId: w.id, name: w.name, img: w.img, glyph: "⚔",
     sub: [trait, range].filter(Boolean).join(" · "),
     // Tap opens the detail panel (like a feature); attack/equip live in the panel + inline buttons.
     use: false
   };
-  if (damage) row.badge = String(damage);
+  if (damage) row.badge = damage.formula;
   attachActions(row, w);
   row.controls = [{ kind: "equip", active: !!w.system?.equipped }, ...chatControl(w), { kind: "delete" }];
   return row;
 }
 
 function armorRow(a) {
-  const score = num(a.system?.baseScore ?? a.system?.score);
+  const score = num(a.system?.armor?.max ?? a.system?.baseScore ?? a.system?.score);
   const row = { itemId: a.id, name: a.name, img: a.img, glyph: "🛡", use: false };
   if (score != null) row.badge = String(score);
   attachActions(row, a);
@@ -460,7 +510,7 @@ function goldBlocks(actor) {
       .filter(([, d]) => d && d.enabled !== false)
       .map(([key, d]) => ({ key, label: d.label ?? key }));
   } else {
-    denoms = ["handfuls", "bags", "chests"].map((key) => ({ key, label: L(`gold.${key}`) }));
+    denoms = ["coins", "handfuls", "bags", "chests"].map((key) => ({ key, label: L(`gold.${key}`) }));
   }
 
   const stats = denoms
@@ -515,7 +565,7 @@ function typeLabel(type) {
 function buildIdentity(actor) {
   const cls = actor.items?.find((i) => i.type === "class")?.name;
   const sub = actor.items?.find((i) => i.type === "subclass")?.name;
-  const level = num(actor.system?.level);
+  const level = num(actor.system?.levelData?.level?.current ?? actor.system?.level);
 
   const parts = [];
   if (typeof level === "number" || (typeof level === "string" && level)) parts.push(`${L("label.level")} ${level}`);
@@ -540,7 +590,7 @@ function topStats(actor) {
   const evasion = num(sys.evasion);
   if (evasion != null) out.push({ label: L("stat.evasion"), value: evasion });
   const prof = num(sys.proficiency);
-  if (prof != null) out.push({ label: L("stat.proficiency"), value: mod(prof), accent: true });
+  if (prof != null) out.push({ label: L("stat.proficiency"), value: String(prof), accent: true });
   return out;
 }
 
@@ -597,7 +647,14 @@ function extraResourceBlocks(actor) {
   return out;
 }
 
-/** Toggle equipped. Armor is exclusive (only one worn) — unequip the other first. */
+/**
+ * Toggle equipped. Armor is exclusive (only one worn) — unequip the other first.
+ * Weapons follow the system's slot rules (character.mjs #toggleEquipItem): an active
+ * beastform effect blocks equipping a weapon entirely; otherwise
+ * `DhCharacter.unequipBeforeEquip` (a public static, module/data/actor/character.mjs:711)
+ * unequips whatever the new weapon's slot/burden would conflict with. Feature-detected —
+ * older system versions without it keep today's naive single-slot behavior.
+ */
 async function toggleEquip(actor, itemId) {
   const item = actor.items?.get(itemId);
   if (!item) return;
@@ -605,6 +662,13 @@ async function toggleEquip(actor, itemId) {
   if (item.type === "armor") {
     const worn = actor.items.find((i) => i.type === "armor" && i.system?.equipped && i.id !== item.id);
     if (worn) await worn.update({ "system.equipped": false });
+  } else if (item.type === "weapon") {
+    if (actor.effects?.find?.((e) => !e.disabled && e.type === "beastform")) {
+      ui.notifications?.warn(game.i18n.localize("DAGGERHEART.UI.Notifications.beastformEquipWeapon"));
+      return;
+    }
+    const unequip = actor.system?.constructor?.unequipBeforeEquip;
+    if (typeof unequip === "function") await unequip.call(actor.system, item);
   }
   return item.update({ "system.equipped": true });
 }
@@ -615,14 +679,64 @@ function postToChat(actor, itemId) {
   return can(item, "toChat") ? item.toChat(item.uuid) : undefined;
 }
 
-/** Move a domain card between loadout and vault. */
+/**
+ * Move a domain card between loadout and vault (the row's vault-control icon).
+ * Mirrors character.mjs #toggleVault: unvaulting is cap-checked against
+ * `loadoutSlot.available`, unless the card opts out via `system.loadoutIgnore`.
+ * Vaulting (loadout -> vault) is always free. `available` undefined (older
+ * versions without the getter) skips the check, same as today's behavior.
+ */
 function toggleVault(actor, itemId) {
   const item = actor.items?.get(itemId);
   if (!item) return;
-  return item.update({ "system.inVault": !item.system?.inVault });
+  const inVault = !!item.system?.inVault;
+  if (inVault) {
+    const available = actor.system?.loadoutSlot?.available;
+    if (available === false && !item.system?.loadoutIgnore) {
+      ui.notifications?.warn(game.i18n.localize("DAGGERHEART.UI.Notifications.loadoutMaxReached"));
+      return;
+    }
+  }
+  return item.update({ "system.inVault": !inVault });
 }
 
-/** An item's embedded actions as a flat array (Collection | array), like Item#use reads. */
+/**
+ * Recall a vaulted domain card — the detail panel's "Recall" action. PORTED from the
+ * recall context-menu handler (character.mjs, sheet-private, not callable): cap-check
+ * against `loadoutSlot.available` (same rule as "To Loadout"), then, when the card has
+ * a Stress cost, pay it via the system's own transient effect-type action exactly as
+ * the system builds it — `action.use(event)` pops the system's own cost-confirm dialog,
+ * so cancelling leaves the card vaulted and no Stress is spent. Falls back to a plain
+ * unvault when the action-type API is absent (older system versions) or the cost is 0.
+ */
+async function recallCard(actor, itemId, event) {
+  const item = actor.items?.get(itemId);
+  if (!item) return;
+
+  const available = actor.system?.loadoutSlot?.available;
+  if (available === false) {
+    ui.notifications?.warn(game.i18n.localize("DAGGERHEART.UI.Notifications.loadoutMaxReached"));
+    return;
+  }
+
+  const recallCost = num(item.system?.recallCost ?? item.system?.recall) ?? 0;
+  if (recallCost <= 0) return item.update({ "system.inVault": false });
+
+  const cls = game.system?.api?.models?.actions?.actionsTypes?.effect;
+  if (typeof cls !== "function" || typeof cls.getSourceConfig !== "function") {
+    return item.update({ "system.inVault": false }); // no action-type API on this version → plain unvault
+  }
+  const action = new cls(
+    { ...cls.getSourceConfig(item.system), type: "effect", chatDisplay: false, cost: [{ key: "stress", value: recallCost }] },
+    { parent: item.system }
+  );
+  const config = await action.use(event);
+  if (config) return item.update({ "system.inVault": false });
+}
+
+/** An item's embedded actions as a flat array (Collection | array), like Item#use reads.
+ *  Shared by the read half's `actionList` so inline action buttons and the desktop-popup
+ *  inspector see the same list (weapon.mjs prepends the attack onto `actionsList`). */
 function actionsOf(item) {
   const a = item?.system?.actionsList ?? item?.system?.actions;
   if (!a) return [];
@@ -639,9 +753,10 @@ function costLabel(key) {
 }
 
 /** An action's costs, normalized for the spend sheet (label + scalable stepper bounds). */
-function describeCosts(action) {
+function describeCosts(actor, action) {
   const raw = action?.cost;
   const list = Array.isArray(raw) ? raw : raw?.contents ?? [...(raw?.values?.() ?? [])];
+  const item = action?.parent?.parent ?? null;
   return (list ?? [])
     .filter((c) => c && c.key)
     .map((c) => ({
@@ -650,7 +765,7 @@ function describeCosts(action) {
       value: c.value ?? 0,
       step: c.step ?? 1,
       scalable: !!c.scalable,
-      max: typeof c.max === "number" ? c.max : null
+      max: parseItemFormula(c.max, actor, item)
     }));
 }
 
@@ -673,7 +788,7 @@ function describeAction(actor, action) {
       ...rollOptions(actor) // experiences, hope, bonus, reaction, bonusEffects
     };
   }
-  const costs = describeCosts(action);
+  const costs = describeCosts(actor, action);
   const uses = action.uses?.max ? { value: action.uses?.value ?? 0, max: action.uses.max } : null;
   if (costs.length || uses) {
     return { kind: "spend", uuid: action.uuid, title: action.name ?? "", costs, uses };
@@ -881,6 +996,46 @@ function restRefreshables(actor, shortrest) {
 }
 
 /**
+ * Delete "until your next rest" active effects once a rest's full budget is taken —
+ * PORTED from expireActiveEffects (module/helpers/utils.mjs:476), sheet/system-private
+ * (not exposed on game.system.api). Gated on the Automation setting
+ * `autoExpireActiveEffects` (a no-op when off, so GM settings stay respected); an
+ * effect's `system.duration.type` is matched against `activeEffectDurations`, skipping
+ * `temporary`/`custom`, always expiring `act`-duration effects, and expiring
+ * shortRest/longRest-duration effects via the same `refreshIsAllowed` rule the
+ * refreshables loop uses. Any config read failing → skip expiry silently (older
+ * versions had no such setting either).
+ */
+async function expireRestActiveEffects(actor, shortrest) {
+  try {
+    const id = CONFIG?.DH?.id ?? SYSTEM_ID;
+    const key = CONFIG?.DH?.SETTINGS?.gameSettings?.Automation;
+    if (!key) return;
+    const auto = game.settings.get(id, key)?.autoExpireActiveEffects;
+    if (!auto) return;
+
+    const durations = CONFIG?.DH?.GENERAL?.activeEffectDurations;
+    if (!durations) return;
+    const allowed = [shortrest ? "shortRest" : "longRest"];
+    const effects = typeof actor.getActiveEffects === "function" ? actor.getActiveEffects() : [...(actor.effects ?? [])];
+
+    const toExpire = effects
+      .filter((effect) => {
+        const type = effect?.system?.duration?.type;
+        if (!type) return false;
+        if (type === durations.temporary?.id || type === durations.custom?.id) return false;
+        if (type === durations.act?.id) return true;
+        return refreshIsAllowed(allowed, type);
+      })
+      .map((e) => e.id);
+
+    if (toExpire.length) await actor.deleteEmbeddedDocuments("ActiveEffect", toExpire);
+  } catch (_) {
+    // config unreadable → skip expiry silently
+  }
+}
+
+/**
  * PURE-ish (reads settings/items, never writes): what the pocket rest sheet needs —
  * the move categories in budget for this rest, each with its pickable moves. Null when
  * the system has no Downtime or the move config can't be read → the shell falls back to
@@ -981,9 +1136,14 @@ async function applyRest(actor, key, picks) {
       const res = feature?.system?.resource;
       if (!res) continue;
       const increasing = res.progression === CONFIG?.DH?.ITEM?.itemResourceProgression?.increasing?.id;
-      const resetValue = increasing ? 0 : res.max ? Roll.replaceFormulaData(res.max, actor) : 0;
+      // takeDowntime evaluates the formula (new Roll(...).evaluateSync().total), not the bare
+      // replaced string — writing the string into a NumberField is a validation error / NaN.
+      // Reuses the R6 formula helper (parseItemFormula), which already mirrors this evaluation.
+      const resetValue = increasing ? 0 : res.max ? parseItemFormula(res.max, actor, feature) ?? 0 : 0;
       await feature.update({ "system.resource.value": resetValue });
     }
+
+    await expireRestActiveEffects(actor, shortrest);
   }
 }
 
@@ -1105,8 +1265,8 @@ function bonusEffectChoices(actor) {
     effects = [];
   }
   for (const eff of effects ?? []) {
-    if (!eff || eff.disabled) continue;
-    const changes = eff.changes ?? eff.system?.changes ?? [];
+    if (!eff || eff.disabled || eff.isSuppressed) continue;
+    const changes = eff.system?.changes ?? eff.changes ?? [];
     if (changes.some((c) => typeof c?.key === "string" && c.key.includes("system.bonuses.roll."))) {
       out.push({ id: eff.id, name: eff.name ?? "" });
     }
@@ -1157,52 +1317,6 @@ function describeRoll(config) {
   if (dice.length) out.dice = dice;
   if (typeof r.success === "boolean") out.success = r.success;
   return out;
-}
-
-/** Strip tags from a system flavor string → a plain one-line action label. */
-function plainText(html) {
-  if (!html) return "";
-  try {
-    const el = document.createElement("div");
-    el.innerHTML = String(html);
-    return (el.textContent ?? "").replace(/\s+/g, " ").trim();
-  } catch (_) {
-    return String(html).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-  }
-}
-
-/**
- * Interpret a chat message into a compact duality roll card for the shell's Chat mode, or
- * null when it isn't a duality roll (the shell then renders the message's own content). A
- * posted duality message carries the evaluated DualityRoll as `message.rolls[0]`, rehydrated
- * to the system's class (registered in CONFIG.Dice), so it exposes the same postEvaluate
- * shape `describeRoll` reads: `total`, `isCritical`, `hope`/`fear` die values, `result.{duality,
- * label}`. Reads only the roll + flavor; never writes; never throws. PURE.
- */
-function getChatCard(message) {
-  try {
-    const r = message?.rolls?.[0];
-    if (!r || typeof r !== "object" || typeof r.total !== "number") return null;
-    const duality = r.result?.duality;
-    const hasHopeFear = r.hope?.value != null || r.fear?.value != null;
-    if (duality == null && !hasHopeFear) return null; // not a duality roll → generic render
-
-    const outcome = r.isCritical ? "crit" : duality > 0 ? "hope" : duality < 0 ? "fear" : "flat";
-    const card = { total: r.total, outcome, label: r.result?.label ?? "" };
-    const action = plainText(message.flavor);
-    if (action) card.action = action;
-    if (r.hope?.value != null) card.hope = r.hope.value;
-    if (r.fear?.value != null) card.fear = r.fear.value;
-
-    // Advantage / disadvantage die, when the roll tracked one.
-    const advVal = r.advantage?.value ?? r.advantage?.total;
-    if (typeof advVal === "number" && advVal !== 0) {
-      card.adv = { kind: advVal > 0 ? "adv" : "dis", value: Math.abs(advVal) };
-    }
-    return card;
-  } catch (_) {
-    return null;
-  }
 }
 
 /**
@@ -1337,7 +1451,7 @@ function getItemDetail(actor, itemId) {
       // Loadout → card actions lead, then Chat / To Vault. Vaulted → Recall leads.
       actions: inVault
         ? [
-            { label: L("detail.recall"), intent: "vault", itemId: item.id, variant: "primary" },
+            { label: L("detail.recall"), intent: "recall", itemId: item.id, variant: "primary" },
             ...cardActions,
             chatAction(item, "ghost")
           ].filter(Boolean)
@@ -1350,8 +1464,7 @@ function getItemDetail(actor, itemId) {
   }
 
   if (item.type === "weapon") {
-    const damage = num(sys.damage) ?? sys.damage?.value;
-    const dtype = sys.damageType ?? sys.damage?.type ?? "";
+    const damage = weaponDamage(item);
     return {
       glyph: "⚔",
       iconTone: "accent",
@@ -1359,10 +1472,10 @@ function getItemDetail(actor, itemId) {
       name: item.name,
       ...desc,
       badges: badges([
-        { label: L("badge.trait"), value: sys.trait ?? "" },
-        { label: L("badge.range"), value: sys.range ?? "" },
-        { label: L("badge.damage"), value: [damage, dtype].filter(Boolean).join(" "), tone: "accent" },
-        { label: L("badge.burden"), value: num(sys.burden) }
+        { label: L("badge.trait"), value: traitLabel(sys.attack?.roll?.trait ?? sys.trait) },
+        { label: L("badge.range"), value: rangeLabel(sys.attack?.range ?? sys.range) },
+        { label: L("badge.damage"), value: damage ? [damage.formula, ...damage.types].filter(Boolean).join(" ") : "", tone: "accent" },
+        { label: L("badge.burden"), value: burdenLabel(sys.burden) }
       ]),
       actions: [
         can(item, "use") ? { label: L("detail.rollAttack"), intent: "useItem", itemId: item.id, variant: "primary" } : null,
@@ -1373,7 +1486,8 @@ function getItemDetail(actor, itemId) {
   }
 
   if (item.type === "armor") {
-    const score = num(sys.baseScore ?? sys.score);
+    const score = num(sys.armor?.max ?? sys.baseScore ?? sys.score);
+    const marks = num(sys.armor?.current);
     const major = num(sys.baseThresholds?.major ?? sys.major);
     const severe = num(sys.baseThresholds?.severe ?? sys.severe);
     return {
@@ -1384,6 +1498,7 @@ function getItemDetail(actor, itemId) {
       ...desc,
       badges: badges([
         { label: L("badge.score"), value: score, tone: "armor" },
+        { label: L("badge.marks"), value: marks, tone: "armor" },
         { label: L("badge.major"), value: major },
         { label: L("badge.severe"), value: severe }
       ]),
@@ -1473,11 +1588,6 @@ export const daggerheartAdapter = {
     return getItemDetail(actor, itemId);
   },
 
-  /** PURE: one chat message → a compact duality roll card, or null for generic render. */
-  getChatCard(message) {
-    return getChatCard(message);
-  },
-
   /** Inspect which desktop popup an item/action use would raise, so the shell can
    *  open a pocket bottom sheet instead. Reads documents; never writes. */
   getActionConfig(actor, ref) {
@@ -1551,6 +1661,8 @@ export const daggerheartAdapter = {
         return toggleEquip(actor, intent.itemId);
       case "vault":
         return toggleVault(actor, intent.itemId);
+      case "recall":
+        return recallCard(actor, intent.itemId, intent.event);
       case "rest":
         // Picks from the pocket rest sheet → apply; bare (fallback) → desktop dialog.
         return intent.picks ? applyRest(actor, intent.key, intent.picks) : openRest(actor, intent.key);

@@ -53,13 +53,6 @@
  *   sheet instead of the system's desktop downtime dialog. Reads settings/documents;
  *   never writes. The shell then fires a `rest` intent carrying the player's `picks`.
  *   Returning `null` (or omitting it) falls back to a bare `rest` intent (desktop dialog).
- * @property {(message: ChatMessage) => (ChatCard | null)} [getChatCard]
- *   PURE: interpret one chat message into a compact, system-flavored roll card (Hope/Fear
- *   dice, outcome, damage) for the shell's Chat mode. The shell owns the chat list, plain
- *   message bubbles, whispers, and system dividers (all core-Foundry, system-agnostic);
- *   this is the one seam where a system gives a roll its own card. Return `null` for any
- *   message that isn't a recognizable roll — the shell then renders the message's own
- *   content HTML generically. Reads documents; never writes; never throws.
  */
 
 /**
@@ -74,10 +67,10 @@
 
 /**
  * @typedef {object} Intent
- * @property {"rollStat"|"rollTrait"|"rollDice"|"useItem"|"openItem"|"adjustResource"|"setResource"|"rollResourceDice"|"toggleResourceDie"|"adjustItemResource"|"adjustItemQty"|"toggleTag"|"toggleItem"|"toChat"|"expChat"|"equip"|"vault"|"rest"|"deathMove"|"primary"|"deleteItem"|"createItem"} type
+ * @property {"rollStat"|"rollTrait"|"rollDice"|"useItem"|"openItem"|"adjustResource"|"setResource"|"rollResourceDice"|"toggleResourceDie"|"adjustItemResource"|"adjustItemQty"|"toggleTag"|"toggleItem"|"toChat"|"expChat"|"equip"|"vault"|"recall"|"rest"|"deathMove"|"primary"|"deleteItem"|"createItem"} type
  * @property {string} [key]     Stat key (rollStat/rollTrait), resource key (adjustResource/setResource), die index (toggleResourceDie), tag key (toggleTag), experience id (expChat), or button key (rest: "short"/"long").
  * @property {string} [formula] Dice expression for the generic dice roller (rollDice), e.g. "2d6 + 1d8 + 3".
- * @property {string} [itemId]  Item id (useItem / openItem / toggleItem / toChat / equip / vault / rollResourceDice / toggleResourceDie / adjustItemResource / adjustItemQty / deleteItem).
+ * @property {string} [itemId]  Item id (useItem / openItem / toggleItem / toChat / equip / vault / recall / rollResourceDice / toggleResourceDie / adjustItemResource / adjustItemQty / deleteItem).
  * @property {string} [itemType] Item type for createItem (e.g. "weapon", "armor", "consumable", "loot").
  * @property {string} [uuid]    Action uuid (useItem on a specific action — drives the system's action with the popups suppressed).
  * @property {number} [delta]   Resource step (adjustResource), e.g. +1 / -1.
@@ -111,28 +104,6 @@
  * @property {string} label              Display-ready die label.
  * @property {number|string} value       Display-ready die value.
  * @property {ResourceTone} [tone]       Shell-owned tint for the value.
- */
-
-/**
- * A roll chat message interpreted into a compact card for the shell's Chat mode — the
- * phone-native form of a system's duality / attack chat card. Returned by the optional
- * `getChatCard` adapter hook; the shell renders it generically (tinting by `outcome`,
- * Hope/Fear dice tiles, an optional damage strip) with no system vocabulary. The shell
- * supplies the surrounding chrome (author, avatar, timestamp) — this is only the result.
- * @typedef {object} ChatCard
- * @property {number} total              Grand total of the roll.
- * @property {"crit"|"hope"|"fear"|"flat"} outcome  Drives the card's accent.
- * @property {string} [label]            Display-ready outcome text (adapter-localized).
- * @property {string} [action]           What was rolled, e.g. "Warhammer Attack · Str".
- * @property {number} [hope]             Hope die face, shown in the gold tile.
- * @property {number} [fear]             Fear die face, shown in the purple tile.
- * @property {{kind:"adv"|"dis", value:number}} [adv]  Advantage/disadvantage die, if any.
- * @property {ChatCardDamage} [damage]   Damage roll bundled with the attack, if any.
- *
- * @typedef {object} ChatCardDamage
- * @property {string} label              Weapon / source name.
- * @property {string} [formula]          Display-ready formula, e.g. "d10+2".
- * @property {number} total              Damage total.
  */
 
 // ---------------------------------------------------------------------------
