@@ -1885,6 +1885,19 @@ body.pocket-sheets-daggerheart-only .ms-fab {
 .ms-native-msg .message-delete { display: none; }
 .ms-native-msg .chat-message header.message-header { cursor: default; }
 .ms-native-msg .message-timestamp { color: var(--ms-muted); }
+/* Core caps the speaker portrait to a small avatar via a sidebar-scoped rule we
+ * don't inherit here — without it the bare <img> fills the card at full width. */
+.ms-native-msg .portrait {
+  flex: none;
+  width: 36px;
+  height: 36px;
+}
+.ms-native-msg .portrait img {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 4px;
+}
 
 .ms-chat-row { --avc: var(--ms-accent); }
 .ms-chat-msg,
