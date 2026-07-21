@@ -1011,6 +1011,26 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // past ApplicationV2's own scroll-position restore (which targets .ms-body) so it wins.
     const body = root.querySelector(".ms-chat-scroll");
     if (body) requestAnimationFrame(() => { body.scrollTop = body.scrollHeight; });
+
+    this.#wireNativeChatCards(root);
+  }
+
+  /**
+   * `#chatRow` serializes each message to an HTML *string* (`outerHTML`) so Handlebars can
+   * inject it; the browser then re-parses that string into brand-new DOM nodes that never had
+   * any `addEventListener` listeners attached (those don't survive serialization). The system's
+   * own chat card buttons (e.g. Daggerheart's "Roll Damage") are wired by its ChatLog listening
+   * for the `renderChatMessageHTML` hook — a hook that fired (if at all) against the original,
+   * now-discarded element. Re-fire it here against the actual live nodes so those listeners
+   * attach for real. Safe to call every render: each render replaces these nodes wholesale, so
+   * there's nothing to double-wire.
+   */
+  #wireNativeChatCards(root) {
+    for (const li of root.querySelectorAll(".ms-native-msg .chat-message[data-message-id]")) {
+      const message = game.messages?.get(li.dataset.messageId);
+      if (!message) continue;
+      try { Hooks.callAll("renderChatMessageHTML", message, li, {}); } catch (_) {}
+    }
   }
 
   /** Live, focus-preserving journal search: filter the rendered list in place. */
