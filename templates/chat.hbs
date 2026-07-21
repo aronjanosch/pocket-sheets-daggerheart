@@ -8,12 +8,17 @@
 
   {{#each chat.messages}}
     {{#if this.nativeHtml}}
-      {{!-- `daggerheart` mirrors the class DhpChatLog puts on the real #chat sidebar tab
-            (see chatLog.mjs DEFAULT_OPTIONS) — the system's own chat-roll/hope/fear
-            styling is scoped under that ancestor class and never applies without it.
-            `color-scheme: dark` makes its light-dark() CSS vars resolve to the dark
-            variants (golden/purple text) instead of the light ones. --}}
-      <div class="ms-native-msg daggerheart" style="color-scheme: dark;">{{{this.nativeHtml}}}</div>
+      {{!-- `daggerheart chat-sidebar` + a nested `.chat-log` mirror the exact ancestor
+            chain the system's chat.less scopes its message-header layout to
+            (`.daggerheart.chat-sidebar .chat-log .chat-message` — portrait size,
+            header flex layout, golden title color); `daggerheart` alone (from
+            DhpChatLog's DEFAULT_OPTIONS) only covers the roll-card styling in
+            chat.less's other block. `color-scheme: dark` makes its light-dark()
+            CSS vars resolve to the dark variants (golden/purple text) instead of
+            the light ones. --}}
+      <div class="ms-native-msg daggerheart chat-sidebar" style="color-scheme: dark;">
+        <div class="chat-log">{{{this.nativeHtml}}}</div>
+      </div>
     {{/if}}
   {{/each}}
 </div>

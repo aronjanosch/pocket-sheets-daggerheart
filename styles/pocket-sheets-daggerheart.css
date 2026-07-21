@@ -1170,6 +1170,22 @@ body.pocket-sheets-daggerheart-only .ms-fab {
   z-index: 2147483000;
 }
 
+/* A system action can still open its own floating ApplicationV2 window (e.g. a
+ * damage-roll config dialog) — those mount straight on <body>, same as our sheet,
+ * so hiding #interface doesn't touch them and they can't be routed into our own
+ * bottom-sheet UI (they're the system's, not ours to reimplement). Center them
+ * and cap them to the viewport instead of leaving them at a desktop-sized,
+ * arbitrarily-positioned default. */
+body.pocket-sheets-daggerheart-only .application:not(.ms-sheet) {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  max-width: 94vw !important;
+  max-height: 90dvh !important;
+  z-index: 2147482000;
+}
+
 /* --- bottom sheet (adjust / roll) ----------------------------------------- */
 
 @keyframes ms-sheet-in {
@@ -1885,19 +1901,6 @@ body.pocket-sheets-daggerheart-only .ms-fab {
 .ms-native-msg .message-delete { display: none; }
 .ms-native-msg .chat-message header.message-header { cursor: default; }
 .ms-native-msg .message-timestamp { color: var(--ms-muted); }
-/* Core caps the speaker portrait to a small avatar via a sidebar-scoped rule we
- * don't inherit here — without it the bare <img> fills the card at full width. */
-.ms-native-msg .portrait {
-  flex: none;
-  width: 36px;
-  height: 36px;
-}
-.ms-native-msg .portrait img {
-  width: 36px;
-  height: 36px;
-  object-fit: cover;
-  border-radius: 4px;
-}
 
 .ms-chat-row { --avc: var(--ms-accent); }
 .ms-chat-msg,
