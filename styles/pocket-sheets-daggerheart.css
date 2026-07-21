@@ -1134,10 +1134,14 @@
 /* --- phone "sheet-only" mode --------------------------------------------- */
 /* Set by launcher.js when on a phone with the canvas disabled: hide all of
  * Foundry's chrome and let the sheet fill the viewport. The sheet, launcher and
- * popouts live on <body>, outside #interface, so only the chrome disappears. */
+ * popouts live on <body>, outside #interface, so only the chrome disappears.
+ * Daggerheart's FearTracker app (`#resources`) also lives on <body> — in its
+ * default "free" position it `document.body.appendChild`s itself instead of
+ * docking into `#interface`, so it needs its own hide rule here. */
 body.pocket-sheets-daggerheart-only #interface,
 body.pocket-sheets-daggerheart-only #pause,
-body.pocket-sheets-daggerheart-only #tooltip {
+body.pocket-sheets-daggerheart-only #tooltip,
+body.pocket-sheets-daggerheart-only #resources {
   display: none !important;
 }
 
@@ -1859,17 +1863,61 @@ body.pocket-sheets-daggerheart-only .ms-fab {
   color: var(--ms-muted);
 }
 
-/* Native Foundry chat message wrapper — message.getHTML() output injected here */
+/* Native Foundry chat message wrapper — message.renderHTML() output injected here.
+ * Foundry core and system chat cards (Daggerheart's `.dh-style` ability/roll cards)
+ * ship their own light, parchment-themed CSS — per the theming rule a system never
+ * hands us CSS, so the rules below re-skin their generic class names to the shell's
+ * dark palette instead of trusting whatever colors ship with the card. */
 .ms-native-msg { width: 100%; }
 .ms-native-msg .chat-message {
   margin: 0;
+  padding: 10px 12px;
   border-radius: 10px;
   max-width: 100%;
   box-sizing: border-box;
+  background: var(--ms-surf);
+  border: 1px solid var(--ms-line);
+  color: var(--ms-fg);
 }
 .ms-native-msg img { max-width: 100%; height: auto; }
 .ms-native-msg .message-delete { display: none; }
 .ms-native-msg .chat-message header.message-header { cursor: default; }
+.ms-native-msg .message-header h4,
+.ms-native-msg .message-metadata,
+.ms-native-msg .subtitle,
+.ms-native-msg .message-content { color: var(--ms-fg); }
+.ms-native-msg .message-timestamp { color: var(--ms-muted); }
+
+/* Daggerheart ability-use / roll cards (`.dh-style`, `.chat-roll`, `.domain-card`). */
+.ms-native-msg .dh-style,
+.ms-native-msg .daggerheart.chat {
+  background: var(--ms-surf2);
+  color: var(--ms-fg);
+}
+.ms-native-msg .domain-card-header .title,
+.ms-native-msg .roll-part-title span,
+.ms-native-msg .roll-part-header span {
+  color: var(--ms-accent);
+  font-family: var(--ms-serif);
+}
+.ms-native-msg .description,
+.ms-native-msg .chat-roll,
+.ms-native-msg .chat-roll * { color: var(--ms-soft); }
+.ms-native-msg .tags .tag,
+.ms-native-msg .tag {
+  background: color-mix(in oklab, var(--ms-accent) 16%, transparent);
+  color: var(--ms-fg);
+  border: 1px solid var(--ms-line);
+  border-radius: 6px;
+}
+.ms-native-msg button,
+.ms-native-msg .ability-use-button {
+  background: var(--ms-accent);
+  color: var(--ms-bg);
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+}
 
 .ms-chat-row { --avc: var(--ms-accent); }
 .ms-chat-msg,

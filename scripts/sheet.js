@@ -324,11 +324,13 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     return { messages, empty: messages.length === 0 };
   }
 
-  /** One chat message → native Foundry-rendered HTML, injected as-is. */
+  /** One chat message → native Foundry-rendered HTML, injected as-is.
+   * `renderHTML()` (v13+) returns the HTMLElement directly; older cores only have
+   * the deprecated `getHTML()`, which returns a jQuery-wrapped element. */
   async #chatRow(m) {
     try {
-      const jq = await m.getHTML();
-      const el = jq instanceof jQuery ? jq[0] : jq;
+      const rendered = m.renderHTML ? await m.renderHTML() : await m.getHTML();
+      const el = rendered instanceof jQuery ? rendered[0] : rendered;
       return { nativeHtml: el?.outerHTML ?? "" };
     } catch (_) {
       return { nativeHtml: "" };
