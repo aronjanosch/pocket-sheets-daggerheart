@@ -311,29 +311,37 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   // --- chat mode (core Foundry; no actor.system) ----------------------------
 
   /**
-   * Build the Chat screen from the core message log. Every message renders via the
-   * document's own native `getHTML()` (already core-sanitized), so the roll cards a
-   * system builds — Hope/Fear duality cards included — show up as-is with no
-   * system-specific adapter seam. Reads core collections only.
+   * Build the Chat screen from the core message log. The template only gets an empty,
+   * `data-message-id`-tagged placeholder per message — the actual native element is
+   * inserted afterward, in `#populateNativeChatCards`. Reads core collections only.
    */
   async #chatContext() {
     const msgs = (game.messages?.contents ?? []).filter((m) => {
       try { return m.visible; } catch (_) { return false; }
     });
-    const messages = await Promise.all(msgs.map((m) => this.#chatRow(m)));
-    return { messages, empty: messages.length === 0 };
+    return { messages: msgs.map((m) => ({ id: m.id })), empty: msgs.length === 0 };
   }
 
-  /** One chat message → native Foundry-rendered HTML, injected as-is.
-   * `renderHTML()` (v13+) returns the HTMLElement directly; older cores only have
-   * the deprecated `getHTML()`, which returns a jQuery-wrapped element. */
-  async #chatRow(m) {
-    try {
-      const rendered = m.renderHTML ? await m.renderHTML() : await m.getHTML();
-      const el = rendered instanceof jQuery ? rendered[0] : rendered;
-      return { nativeHtml: el?.outerHTML ?? "" };
-    } catch (_) {
-      return { nativeHtml: "" };
+  /**
+   * Insert each message's own native element as a live DOM node, not an HTML string.
+   * `message.renderHTML()` (v13+; `getHTML()` on older cores, jQuery-wrapped) attaches
+   * whatever listeners the document/system need directly on the element it returns —
+   * a Handlebars `{{{outerHTML}}}` round-trip would serialize that element to a string
+   * and have the browser re-parse it, which silently drops every one of those listeners
+   * (that's exactly why "Roll Damage" / "Apply Effects" did nothing: they're wired inline
+   * inside the message's own renderHTML, not via a hook we could replay). Appending the
+   * live node instead keeps them intact.
+   */
+  async #populateNativeChatCards(root) {
+    for (const holder of root.querySelectorAll(".ms-native-msg[data-message-id]")) {
+      const message = game.messages?.get(holder.dataset.messageId);
+      const target = holder.querySelector(".chat-log");
+      if (!message || !target) continue;
+      try {
+        const rendered = message.renderHTML ? await message.renderHTML() : await message.getHTML();
+        const el = rendered instanceof jQuery ? rendered[0] : rendered;
+        if (el && target.isConnected) target.replaceChildren(el);
+      } catch (_) { /* leave the placeholder empty */ }
     }
   }
 
@@ -1009,29 +1017,13 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
     // Pin to the bottom so the latest message is in view (chat reads newest-last). Deferred
     // past ApplicationV2's own scroll-position restore (which targets .ms-body) so it wins.
+    // Re-pinned once the (async) native cards have grown the placeholders to full height.
     const body = root.querySelector(".ms-chat-scroll");
     if (body) requestAnimationFrame(() => { body.scrollTop = body.scrollHeight; });
 
-    this.#wireNativeChatCards(root);
-  }
-
-  /**
-   * `#chatRow` serializes each message to an HTML *string* (`outerHTML`) so Handlebars can
-   * inject it; the browser then re-parses that string into brand-new DOM nodes that never had
-   * any `addEventListener` listeners attached (those don't survive serialization). The system's
-   * own chat card buttons (e.g. Daggerheart's "Roll Damage") are wired by its ChatLog listening
-   * for the `renderChatMessageHTML` hook — a hook that fired (if at all) against the original,
-   * now-discarded element. Re-fire it here against the actual live nodes so those listeners
-   * attach for real. Safe to call every render: each render replaces these nodes wholesale, so
-   * there's nothing to double-wire.
-   */
-  #wireNativeChatCards(root) {
-    for (const li of root.querySelectorAll(".ms-native-msg .chat-message[data-message-id]")) {
-      const message = game.messages?.get(li.dataset.messageId);
-      if (!message) continue;
-      try { Hooks.callAll("renderChatMessageHTML", message, li, {}); } catch (_) {}
-    }
-  }
+    this.#populateNativeChatCards(root).then(() => {
+      if (body?.isConnected) body.scrollTop = body.scrollHeight;
+    });
 
   /** Live, focus-preserving journal search: filter the rendered list in place. */
   #wireJournal(root) {

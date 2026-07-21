@@ -1,25 +1,27 @@
-{{!-- Chat mode: the table message log. Each message is rendered via Foundry's own
-      message.getHTML() so system roll cards, item posts, and enriched content all
-      display identically to the normal sidebar — no custom parser needed. --}}
+{{!-- Chat mode: the table message log. Each message renders via Foundry's own
+      message.renderHTML(), appended as a live node after render (see chat.hbs
+      placeholders below + sheet.js #populateNativeChatCards) so system roll
+      cards, item posts, and enriched content all display and behave
+      identically to the normal sidebar — no custom parser needed. --}}
 <div class="ms-body ms-chat-scroll">
   {{#if chat.empty}}
     <div class="ms-chat-empty">{{localize "MOBILE_SHEET.chat.empty"}}</div>
   {{/if}}
 
   {{#each chat.messages}}
-    {{#if this.nativeHtml}}
-      {{!-- `daggerheart chat-sidebar` + a nested `.chat-log` mirror the exact ancestor
-            chain the system's chat.less scopes its message-header layout to
-            (`.daggerheart.chat-sidebar .chat-log .chat-message` — portrait size,
-            header flex layout, golden title color); `daggerheart` alone (from
-            DhpChatLog's DEFAULT_OPTIONS) only covers the roll-card styling in
-            chat.less's other block. `color-scheme: dark` makes its light-dark()
-            CSS vars resolve to the dark variants (golden/purple text) instead of
-            the light ones. --}}
-      <div class="ms-native-msg daggerheart chat-sidebar" style="color-scheme: dark;">
-        <div class="chat-log">{{{this.nativeHtml}}}</div>
-      </div>
-    {{/if}}
+    {{!-- Empty on purpose — `#populateNativeChatCards` (sheet.js) appends the message's
+          own live, renderHTML()-produced element here after render, instead of a
+          Handlebars-interpolated HTML string, so its listeners (Roll Damage, Apply
+          Effects, ...) survive. `daggerheart chat-sidebar` + a nested `.chat-log`
+          mirror the exact ancestor chain the system's chat.less scopes its
+          message-header layout to (`.daggerheart.chat-sidebar .chat-log .chat-message`
+          — portrait size, header flex layout, golden title color); `daggerheart` alone
+          (from DhpChatLog's DEFAULT_OPTIONS) only covers the roll-card styling in
+          chat.less's other block. `color-scheme: dark` makes its light-dark() CSS vars
+          resolve to the dark variants (golden/purple text) instead of the light ones. --}}
+    <div class="ms-native-msg daggerheart chat-sidebar" data-message-id="{{this.id}}" style="color-scheme: dark;">
+      <div class="chat-log"></div>
+    </div>
   {{/each}}
 </div>
 
