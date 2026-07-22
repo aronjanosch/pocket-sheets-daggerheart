@@ -1024,6 +1024,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     this.#populateNativeChatCards(root).then(() => {
       if (body?.isConnected) body.scrollTop = body.scrollHeight;
     });
+  }
 
   /** Live, focus-preserving journal search: filter the rendered list in place. */
   #wireJournal(root) {
