@@ -842,6 +842,13 @@ async function usePocketAction(actor, action, intent) {
     config.__pocketMarker = marker;
     config.dialog = { ...(config.dialog ?? {}), configure: false };
 
+    // `UsesField.execute` (the workflow step that actually spends a charge) gates on
+    // `config.uses.enabled` — a flag CostField's own prepareConfig defaults to `true`,
+    // but UsesField never does; it's only ever set by the desktop confirm dialog we're
+    // suppressing here. Without it, a uses-only feature (no roll, no cost) silently
+    // never consumes its charge — no error, the dialog just never ran to set the flag.
+    if (config.uses) config.uses.enabled ??= true;
+
     if (config.roll) {
       const adv = advantageValue(intent.advantage);
       if (adv != null) config.roll.advantage = adv;
