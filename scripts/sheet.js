@@ -32,6 +32,9 @@ const TONE_CLASS = {
 
 const clampPct = (v, m) => (!m || m <= 0 ? 0 : Math.max(0, Math.min(100, (v / m) * 100)));
 
+/** How long the roll banner stays up before auto-dismissing. */
+const BANNER_DURATION_MS = 10_000;
+
 /**
  * Item-row control kinds → their shell-owned icon + intent. The adapter only
  * names the kind (and a toggle `active` state); the shell owns the chrome. Each
@@ -55,6 +58,8 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   #rollOptions = null;
   /** Last roll's normalized result, kept so the banner survives re-renders. */
   #lastRoll = null;
+  /** Auto-dismiss timer for the roll banner (cleared/replaced on re-render or manual close). */
+  #bannerTimer = null;
   /** Top-level mode: the sheet itself, the table chat, or the journal. Shell-local. */
   #activeMode = "sheet";
   /** iPad layout only: which screen the always-on right rail shows ("chat"|"journal"),
@@ -961,8 +966,16 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   /** Leave fullscreen pocket mode → back to the full Foundry interface (map on).
-   *  Per-device; the inverse FAB (or the macro) brings it back. Reloads. */
+   *  Per-device; the inverse FAB (or the macro) brings it back. Reloads, so confirm first —
+   *  this button sits in the same corner a roll banner used to overlap; a stray tap
+   *  shouldn't silently reload the table's game. */
   static async #onExitPocket() {
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: game.i18n.localize("MOBILE_SHEET.launcher.exitTitle") },
+      content: `<p>${game.i18n.localize("MOBILE_SHEET.launcher.exitWarning")}</p>`,
+      rejectClose: false
+    });
+    if (!confirmed) return;
     const { exitPocketMode } = await import("./launcher.js");
     await exitPocketMode();
   }
@@ -1808,12 +1821,14 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
    * roll, since chat can be hidden in phone sheet-only mode. Shows the grand total, the
    * adapter's localized outcome label, and any notable dice (Hope / Fear / per-type),
    * tinted by `outcome`. Non-blocking (the sheet stays visible, so resource changes show
-   * through) and persistent: it survives re-renders and stays until dismissed or the next
-   * roll replaces it. Reads only the normalized RollResult — no system knowledge.
+   * through) and auto-dismisses after `BANNER_DURATION_MS` (a thin bar counts it down),
+   * or sooner via its close button / the next roll replacing it. Reads only the
+   * normalized RollResult — no system knowledge.
    */
   #renderBanner() {
     const root = this.element?.querySelector(".ms-root") ?? this.element;
     if (!root) return;
+    clearTimeout(this.#bannerTimer);
     root.querySelector(".ms-banner")?.remove(); // never stack banners
     const r = this.#lastRoll;
     if (!r) return;
@@ -1837,14 +1852,22 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         ${r.label ? `<span class="ms-banner-label">${esc(r.label)}</span>` : ""}
         ${dice ? `<span class="ms-banner-dice">${dice}</span>` : ""}
       </span>
-      <button type="button" class="ms-banner-close" aria-label="Close">✕</button>`;
+      <button type="button" class="ms-banner-close" aria-label="Close">✕</button>
+      <span class="ms-banner-timer"><span class="ms-banner-timer-fill"></span></span>`;
     root.appendChild(el);
-    requestAnimationFrame(() => el.classList.add("ms-banner-in"));
+    requestAnimationFrame(() => {
+      el.classList.add("ms-banner-in");
+      const fill = el.querySelector(".ms-banner-timer-fill");
+      if (fill) fill.style.transitionDuration = `${BANNER_DURATION_MS}ms`;
+      requestAnimationFrame(() => fill?.classList.add("ms-banner-timer-run"));
+    });
     el.querySelector(".ms-banner-close").addEventListener("click", () => this.#dismissBanner());
+    this.#bannerTimer = setTimeout(() => this.#dismissBanner(), BANNER_DURATION_MS);
   }
 
   /** Dismiss the banner and forget the last roll (so a re-render won't bring it back). */
   #dismissBanner() {
+    clearTimeout(this.#bannerTimer);
     this.#lastRoll = null;
     const el = this.element?.querySelector(".ms-banner");
     if (!el) return;

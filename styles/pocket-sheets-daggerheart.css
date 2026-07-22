@@ -1697,27 +1697,31 @@ body.pocket-sheets-daggerheart-only .application:not(.ms-sheet) {
 .ms-detail-act-ghost { background: transparent; color: var(--ms-soft); border-color: var(--ms-line); }
 
 /* --- roll result banner --------------------------------------------------- */
-/* Transient in-sheet echo of a roll (chat may be hidden in sheet-only mode).
-   Slides down from the top, tinted by outcome, auto-dismisses. */
+/* Transient in-sheet echo of a roll (chat may be hidden in sheet-only mode). Sized to
+   its content (not full-bleed) and centered, so it lands in the clear space between
+   the header's edges instead of running under the corner exit button. Slides down
+   from the top, tinted by outcome, auto-dismisses (see the timer bar at its foot). */
 .ms-banner {
   position: absolute;
   top: 10px;
-  left: 10px;
-  right: 10px;
+  left: 50%;
   z-index: 10;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  width: max-content;
+  max-width: min(88vw, 320px);
+  padding: 10px 12px 13px;
   border-radius: var(--ms-radius);
   background: linear-gradient(180deg, var(--ms-surf2), var(--ms-surf));
   border: 1px solid var(--tone, var(--ms-accent));
   box-shadow: 0 14px 34px -12px #000, 0 0 0 3px color-mix(in oklab, var(--tone, var(--ms-accent)) 16%, transparent);
-  transform: translateY(calc(-100% - 16px));
+  overflow: hidden; /* clips the timer bar's corners to match the card */
+  transform: translate(-50%, calc(-100% - 16px));
   opacity: 0;
   transition: transform 0.22s ease, opacity 0.22s ease;
 }
-.ms-banner-in { transform: translateY(0); opacity: 1; }
+.ms-banner-in { transform: translate(-50%, 0); opacity: 1; }
 
 .ms-banner-hope { --tone: var(--ms-accent); }
 .ms-banner-fear { --tone: var(--ms-stress); }
@@ -1768,6 +1772,28 @@ body.pocket-sheets-daggerheart-only .application:not(.ms-sheet) {
   place-items: center;
   cursor: pointer;
 }
+
+/* Thin countdown bar at the banner's foot — shrinks from full to empty over its
+ * lifetime (duration set inline via JS) so remaining time reads at a glance. */
+.ms-banner-timer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: color-mix(in oklab, var(--tone, var(--ms-accent)) 20%, transparent);
+}
+.ms-banner-timer-fill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--tone, var(--ms-accent));
+  transform: scaleX(1);
+  transform-origin: left;
+  transition-property: transform;
+  transition-timing-function: linear;
+}
+.ms-banner-timer-run { transform: scaleX(0); }
 
 /* --- rest (pocket downtime) sheet ----------------------------------------- */
 .ms-rest-hint {

@@ -95,6 +95,7 @@
   "MOBILE_SHEET.launcher.fabTitle": "Open mobile sheet",
   "MOBILE_SHEET.launcher.enterTitle": "Enter pocket mode",
   "MOBILE_SHEET.launcher.exitTitle": "Exit to full Foundry",
+  "MOBILE_SHEET.launcher.exitWarning": "This turns the map canvas back on and reloads Foundry. Continue?",
   "MOBILE_SHEET.launcher.selectTitle": "Choose a character",
   "MOBILE_SHEET.launcher.switchTitle": "Switch character",
 
