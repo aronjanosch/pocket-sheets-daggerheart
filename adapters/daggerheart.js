@@ -208,6 +208,19 @@ function adjustItemResource(actor, itemId, delta) {
   return item.update({ "system.resource.value": clamp((res.value ?? 0) + delta, 0, max) });
 }
 
+/** Manually reset a simple/die item resource to its rest-refresh value — the pocket
+ *  equivalent of editing the desktop sheet's number input by hand. Mirrors the
+ *  increasing/max reset math `takeRest`'s refreshables loop applies at end of rest. */
+function resetItemResource(actor, itemId) {
+  const item = actor.items?.get(itemId);
+  const res = item?.system?.resource;
+  if (!res) return;
+  if (res.type === "die") return item.update({ "system.resource.value": 0 });
+  const increasing = res.progression === CONFIG?.DH?.ITEM?.itemResourceProgression?.increasing?.id;
+  const resetValue = increasing ? 0 : parseItemFormula(res.max, actor, item) ?? 0;
+  return item.update({ "system.resource.value": resetValue });
+}
+
 function resourceBlock(actor, key, label, tone, display) {
   const res = actor.system?.resources?.[key];
   if (!res) return null;
@@ -1681,6 +1694,8 @@ export const daggerheartAdapter = {
         return toggleItemDie(actor, intent.itemId, intent.key);
       case "adjustItemResource":
         return adjustItemResource(actor, intent.itemId, intent.delta);
+      case "resetItemResource":
+        return resetItemResource(actor, intent.itemId);
       case "adjustResource":
         return adjustResource(actor, intent.key, intent.delta);
       case "setResource":

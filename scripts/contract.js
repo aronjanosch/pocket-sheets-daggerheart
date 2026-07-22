@@ -67,10 +67,10 @@
 
 /**
  * @typedef {object} Intent
- * @property {"rollStat"|"rollTrait"|"rollDice"|"useItem"|"openItem"|"adjustResource"|"setResource"|"rollResourceDice"|"toggleResourceDie"|"adjustItemResource"|"adjustItemQty"|"toggleTag"|"toggleItem"|"toChat"|"expChat"|"equip"|"vault"|"recall"|"rest"|"deathMove"|"primary"|"deleteItem"|"createItem"} type
+ * @property {"rollStat"|"rollTrait"|"rollDice"|"useItem"|"openItem"|"adjustResource"|"setResource"|"rollResourceDice"|"toggleResourceDie"|"adjustItemResource"|"resetItemResource"|"adjustItemQty"|"toggleTag"|"toggleItem"|"toChat"|"expChat"|"equip"|"vault"|"recall"|"rest"|"deathMove"|"primary"|"deleteItem"|"createItem"} type
  * @property {string} [key]     Stat key (rollStat/rollTrait), resource key (adjustResource/setResource), die index (toggleResourceDie), tag key (toggleTag), experience id (expChat), or button key (rest: "short"/"long").
  * @property {string} [formula] Dice expression for the generic dice roller (rollDice), e.g. "2d6 + 1d8 + 3".
- * @property {string} [itemId]  Item id (useItem / openItem / toggleItem / toChat / equip / vault / recall / rollResourceDice / toggleResourceDie / adjustItemResource / adjustItemQty / deleteItem).
+ * @property {string} [itemId]  Item id (useItem / openItem / toggleItem / toChat / equip / vault / recall / rollResourceDice / toggleResourceDie / adjustItemResource / resetItemResource / adjustItemQty / deleteItem).
  * @property {string} [itemType] Item type for createItem (e.g. "weapon", "armor", "consumable", "loot").
  * @property {string} [uuid]    Action uuid (useItem on a specific action — drives the system's action with the popups suppressed).
  * @property {number} [delta]   Resource step (adjustResource), e.g. +1 / -1.

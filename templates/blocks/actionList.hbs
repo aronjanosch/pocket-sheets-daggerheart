@@ -59,7 +59,11 @@
             {{else}}
               {{#if this.hasImg}}<img class="ms-itemres-die-img ms-itemres-die-single" src="{{this.img}}" alt="">{{/if}}
               <button type="button" class="ms-dice-mod-btn" data-action="adjustItemResource" data-item-id="{{this.itemId}}" data-delta="-1">−</button>
-              <span class="ms-itemres-val">{{this.value}}{{#if this.hasMax}} / {{this.max}}{{/if}}</span>
+              {{!-- Long-press / right-click resets to the rest-refresh value — there's no
+                    other way to manually refresh this on a canvas-off phone sheet (the
+                    desktop sheet's own number input can just be typed into). --}}
+              <span class="ms-itemres-val" data-secondary-action="resetItemResource" data-item-id="{{this.itemId}}"
+                    title="{{localize "MOBILE_SHEET.action.resetResource"}}">{{this.value}}{{#if this.hasMax}} / {{this.max}}{{/if}}</span>
               <button type="button" class="ms-dice-mod-btn" data-action="adjustItemResource" data-item-id="{{this.itemId}}" data-delta="1">+</button>
             {{/if}}
           </div>

@@ -980,7 +980,7 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     await exitPocketMode();
   }
 
-  // --- secondary gesture (long-press / right-click → openItem) --------------
+  // --- secondary gesture (long-press / right-click) --------------------------
 
   /** @override Wire the secondary gesture the native `actions` map can't express. */
   _onRender(context, options) {
@@ -989,25 +989,29 @@ export class PocketSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (!root) return;
 
     for (const el of root.querySelectorAll("[data-secondary-action='openItem']")) {
-      const open = (ev) => {
-        ev.preventDefault();
-        this.#openItem(el.dataset.itemId, ev);
-      };
-      el.addEventListener("contextmenu", open);
-
-      // Touch long-press (~500ms) for phones with no right-click.
-      let timer;
-      const cancel = () => clearTimeout(timer);
-      el.addEventListener("touchstart", () => { timer = setTimeout(() => open(new Event("longpress")), 500); }, { passive: true });
-      el.addEventListener("touchend", cancel, { passive: true });
-      el.addEventListener("touchmove", cancel, { passive: true });
-      el.addEventListener("touchcancel", cancel, { passive: true });
+      this.#wireSecondaryGesture(el, (ev) => this.#openItem(el.dataset.itemId, ev));
+    }
+    for (const el of root.querySelectorAll("[data-secondary-action='resetItemResource']")) {
+      this.#wireSecondaryGesture(el, () => this.#dispatch({ type: "resetItemResource", itemId: el.dataset.itemId }));
     }
 
     this.#wireResourceSliders(root);
     this.#wireChat(root);
     this.#wireJournal(root);
     this.#renderBanner(); // re-attach a live roll banner after a re-render
+  }
+
+  /** Right-click, or a ~500ms touch long-press for phones with no right-click. */
+  #wireSecondaryGesture(el, handler) {
+    const fire = (ev) => { ev.preventDefault(); handler(ev); };
+    el.addEventListener("contextmenu", fire);
+
+    let timer;
+    const cancel = () => clearTimeout(timer);
+    el.addEventListener("touchstart", () => { timer = setTimeout(() => fire(new Event("longpress")), 500); }, { passive: true });
+    el.addEventListener("touchend", cancel, { passive: true });
+    el.addEventListener("touchmove", cancel, { passive: true });
+    el.addEventListener("touchcancel", cancel, { passive: true });
   }
 
   /** Compose-bar wiring + keep the message list pinned to the newest message. */
